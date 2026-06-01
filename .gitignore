@@ -1,0 +1,31 @@
+# ── Python ───────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# ── Regenerable ML artifacts (embedding caches, corpora, checkpoints) ─────
+# All rebuildable from the data loaders + training code; multi-GB, kept off-repo.
+out/
+**/out/
+*.npy
+*.npz
+*.parquet
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# ── Reference PDFs (large binaries, re-downloadable from arXiv) ───────────
+*.pdf
+
+# ── OS / editor cruft ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
