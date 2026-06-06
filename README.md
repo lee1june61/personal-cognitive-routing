@@ -1,32 +1,28 @@
 # Cognitive Routing over a Universal Knowledge Graph
 
-> Can we model *who a user is* not as a single vector, but as a **distribution over shared interpretive operations** — the reusable ways of reasoning that everyone draws from, but that each person activates differently depending on context?
+> Can we model *who a user is* not as a single vector, but as a **distribution over shared interpretive operations**: the reusable ways of reasoning that everyone draws from, but that each person activates differently depending on context?
 
-This repository is a research log of that question. It is an **honest research project**: most of what is recorded here is a sequence of carefully designed experiments that **did not work the way I hoped**, what each negative result ruled out, and how it reshaped the next attempt. The negative results are the point — they are where the actual learning happened.
+This repository is a research log of that question. It is an **honest research project**: most of what is recorded here is a sequence of carefully designed experiments that **did not work the way I hoped**, what each negative result ruled out, and how it reshaped the next attempt. The negative results are the point. They are where the actual learning happened.
 
-If you only read one thing after this page, read **[`docs/research-journey.md`](docs/research-journey.md)** — the full "what I tried, what broke, and why" narrative.
+If you only read one thing after this page, read **[`docs/research-journey.md`](docs/research-journey.md)**, the full "what I tried, what broke, and why" narrative.
 
 ---
 
-## The problem
+## 1. The vision
 
 Most LLM personalization treats a user as a **whole, monolithic object**:
 
-- a single flat **embedding** (a point in space), or
-- an **isolated per-user module** (one fine-tuned adapter per person).
+- a single flat **embedding** (a point in space, e.g. Lee et al. 2025), or
+- an **isolated per-user module** (one fine-tuned adapter per person, e.g. Per-Pcs, OPPU).
 
-Both miss something basic about people. The *same* person reasons differently in different contexts — analytically about a contract, narratively about a memory, socially about a friend. And *different* people often share reasoning patterns. A flat vector can't express "this user, in this context, leans on causal reasoning"; an isolated per-user adapter can't express what two users have *in common*.
+Both miss something basic about people. The *same* person reasons differently in different contexts: analytically about a contract, narratively about a memory, socially about a friend. And *different* people often share reasoning patterns. A flat vector can't express "this user, in this context, leans on causal reasoning"; an isolated per-user adapter can't express what two users have *in common*.
 
-**The hypothesis of this project:** user identity is better described as a **distribution over which shared interpretive operations a person activates**, conditioned on the situation.
+**The hypothesis of this project** is that user identity is *structurally decomposable* into two parts:
 
-## The core idea
+1. **A shared pool of interpretive operations**: `K` learnable "experts," each ideally capturing a reusable reasoning primitive (comparison, causal inference, narrative reconstruction, …). These are *universal* and learned from data, shared across all users.
+2. **A per-user, context-conditional activation distribution `G_u`**: given an input, which operations fire, and how strongly. The *same* operation pool, routed differently per user and per context.
 
-Decompose personalization into two parts:
-
-1. **A shared pool of interpretive operations** — `K` learnable "experts," each ideally capturing a reusable reasoning primitive (comparison, causal inference, narrative reconstruction, …). These are *universal* and learned from data, shared across all users.
-2. **A per-user, context-conditional activation distribution `G_u`** — given an input, which operations fire, and how strongly. The *same* operation pool, routed differently per user and per context.
-
-The knowledge graph (KG) is treated as a **cognitive output, not an input**: it is *generated* by combining the input with the activated operation pattern. This keeps the whole thing **unsupervised** — no external KG, no operation labels — so any operation structure has to **emerge** from the learning pressure, not be handed to the model.
+The knowledge graph (KG) is treated as a **cognitive output, not an input**: it is *generated* by combining the input with the activated operation pattern. This keeps the operation axis **label-free** (no external KG, no operation labels): the only training signal is the observable answer, so any operation structure has to **emerge** from that pressure rather than being handed to the model.
 
 ```
   input text
@@ -41,36 +37,144 @@ The knowledge graph (KG) is treated as a **cognitive output, not an input**: it 
   generated KG / answer  ────────────►  training signal
 ```
 
-Architecturally this is a **sparse Mixture-of-Experts** whose gate learns both input-driven routing and (eventually) user-conditional modulation. Same input, different routing → different operation path → different output.
-
-> **A note on claims.** This is exploratory work. I am *not* claiming a novel method or state-of-the-art result. The contribution here is a clearly-stated hypothesis, a forced experimental design, and **honestly reported outcomes** — including the failures.
+Architecturally this is a **sparse Mixture-of-Experts** whose gate learns both input-driven routing and, eventually, user-conditional modulation. Same input, different routing → different operation path → different output. For the full paradigm and architecture, see [`docs/vision.md`](docs/vision.md).
 
 ---
 
-## What I built, and what happened
+## 2. What's new, and what isn't
 
-A compressed timeline. Full details, hypotheses, setups, and result tables are in **[`docs/research-journey.md`](docs/research-journey.md)**.
+To be upfront: the building blocks here are not new, and this project claims no new method and no state-of-the-art result. Mixture-of-experts routing, generating structure from text, unsupervised expert specialization, and even *per-user* expert routing all already exist. The closest neighbors are worth naming precisely, because each one comes close on a single axis:
 
-| Stage | Idea | Outcome |
+| Closest work | Shares with this project | Differs on |
 |---|---|---|
-| **Phase 1** — reconstruction cycle | Train an MoE to reconstruct its own input; hope experts specialize into *operations*. | ❌ **Negative.** Experts split by **topic / text source**, not by operation. Reconstruction rewards *content*, so operation structure never had to emerge. |
-| **Phase 1.5 / 1a** — flat operation router | Swap the objective: input → KG → **predict the answer** (multiple-choice logic QA), with a 3-way information bottleneck so the answer *must* flow through the routed operations. | ❌ **Weak-ceiling negative.** Diagnosis: the logic-QA corpus is **single-operation** — every question announces its own operation. No *composition* to discover. |
-| **Phase 1.5 / 1b** — sequential chain | Move to **multi-hop** QA (MuSiQue) where a problem needs 2–4 chained reasoning steps; let experts chain sequentially. | ❌ **Negative on sequential composition.** The substrate is healthy (flat model reaches ~0.60 val accuracy) but the chain **does not discover adaptive depth** — it performs no better than the flat mixture. |
-| **Direction 1** — parallel co-activation *(current)* | Reframe: the flat mixture's **simultaneously-active experts** (~5 at a time) already *are* a co-activation distribution — i.e. exactly the `G_u` from the vision. Test parallel/simultaneous composition directly, via causal lesioning. | 🔬 **In progress.** |
+| P-React | a person mapped to a routing distribution over experts | supervised by personality (Big Five) labels; experts predefined; a trait, not an interpretive operation |
+| CoPL, MoE-DPO, CoMiGS | per-user routing over a (partly) shared expert pool | the routing axis is preference or domain, and supervised; experts are capacity modules, not operations |
+| Depth-specialized reasoning MoE | reasoning operations as experts, composed across steps | experts defined by hand; not per-user; not unsupervised |
+| Unsupervised sparse-MoE specialization | expert structure emerging without labels | not personalization; experts not read as interpretive operations |
 
-The throughline: each negative result was **informative**. Phase 1 falsified "reconstruction yields operations." 1a localized the failure to the **corpus** (no composition substrate). 1b falsified "*sequential* chaining is the right inductive bias" — and, in doing so, pointed back at the *parallel* co-activation structure the project originally described.
+What is left is a specific combination none of them occupy: interpretive operations (how a person reasons, not their preferences or traits), discovered *without operation labels*, treated as a generated *output*, and conditioned per user, with a falsifiable test that the shared operations behave consistently across users (S1). The question is therefore not "what is this user like?" but *which operations does a person apply, and when?*
+
+Two things keep this short of a novelty claim, and neither is "someone already did it." First, a new combination of known parts is the weakest kind of novelty; its worth depends on the combination doing something the neighbors cannot. Second, that has not been shown yet: the central mechanism, operations emerging without operation labels, has not held up in the experiments below. So this repository is best read as a falsifiable *question* under investigation rather than a finished contribution. (Reconstruction was the first attempt and was falsified in Phase 1; answer-prediction replaced it; whether interpretive operations emerge at all is still open.)
+
+> **S1 (mechanistic universality).** If the same operation is active for two different users, the formal signature of what it generates should be similar across them. If not, the "shared mechanism" is really `K` user-specific subnetworks, and the decomposition is wrong. (A Phase 2 test; the per-user axis isn't built yet.)
+
+What the project does offer is a clearly-stated and falsifiable hypothesis, a design whose parts follow from a single commitment rather than being assembled ad hoc, a battery for separating genuine operation structure from topical shortcuts, and an honest record of what has been ruled out. The broader survey of prior work is in [`docs/literature-review.md`](docs/literature-review.md).
+
+---
+
+## 3. Phase 1 — the reconstruction cycle *(deprecated, informative negative)*
+
+### The questions we broke it into
+
+The guiding question: *can interpretive operations emerge if an MoE is trained to reconstruct its own input?* When the first run failed, the failure was localized with a three-branch diagnostic ladder (F1 → F2 → F3):
+
+- **F1 (measurement).** Was the operation signal simply *cut off* by probe truncation in evaluation?
+- **F2 (encoder).** Can the frozen encoder *even encode* operation structure at all?
+- **F3 (objective).** Does the reconstruction objective *itself* let topic/content drown out operation?
+
+### Experiments, results & interpretation
+
+A 5-run ablation over routing density and regularization, plus a no-MoE baseline (full setup in [`docs/research-journey.md`](docs/research-journey.md)):
+
+| run | epochs | K_active | recon (cos) | downstream (SimBench) | note |
+|---|---|---|---|---|---|
+| v3_minimal | 30 | 13.88 | 0.8864 | **0.7120** | dense routing; best downstream |
+| v4_diverse | 30 | 6.56 | 0.8786 | 0.7029 | 7-source; clusters form at **source level** |
+| v5_arch | 30 | **1.00** | 0.8788 | 0.7067 | orthogonality penalty → collapses to **K=1** (degenerate) |
+| **v6_long** | 79 | 5.66 | 0.8789 | **0.6901** | paradigm-faithful, sharpest clusters, **lowest** downstream |
+| b0 (no MoE) | 30 | — | 0.8687 | 0.7082 | baseline |
+
+- **F1 and F2 were rejected.** Fixing the probe didn't help, and read straight off the *raw frozen encoder*, operation alignment was real but small (~+0.18).
+- **F3 was the structural cause.** Topic alignment (0.58–0.97) dwarfed operation alignment in *every* configuration. The experts clustered by **source / format** (narrative vs. discussion vs. finance), not by operation, the classic "experts specialize by surface token-type" pattern. And the **sharper** the clustering, the **worse** the downstream task, a direct symptom of a pretext/downstream **objective mismatch**.
+
+**Interpretation.** Reconstruction is **agnostic to *how* text is processed**: it only cares about *what* the text is about. Two people who reason differently about the same topic produce similar-content text, so an operation-specialized expert is never *needed* to lower the loss.
+
+> A design trap found here: an orthogonality penalty meant to *encourage* expert diversity instead drove the sparse gate to saturate at a single active expert (`K_active = 1`). The penalty-free configuration was the paradigm-faithful one. Small regularizers can silently destroy the structure you're trying to create.
+
+### Why we pivoted to Phase 1.5
+
+Reconstruction-as-primary is **self-defeating for an operation objective**. The fix: **stop reconstructing the input; start predicting an answer that can only be reached by reasoning.**
+
+---
+
+## 4. Phase 1.5 — the operation-axis objective *(current)*
+
+### The questions we broke it into
+
+**(a) The information bottleneck: three design questions.** The new objective (question + passage → multiple-choice answer) is only meaningful if the answer *must* flow through the routed operations. Three structural constraints enforce that:
+
+1. **Question-only encoding.** Only the question is encoded into the router; the passage is never seen by the encoder.
+2. **Passage as a decoder side-channel.** The passage enters only as key/value in cross-attention, never as learned KG content.
+3. **KG modulates, with no bypass.** If the operation activation is zero, the output is zero. (This came from a *real bug*: an earlier design assumed a zero routing query made attention "undefined"; in fact it makes attention *uniform*, leaking the whole passage, and a zero-expert run still scored 0.35. The fix was a strict bias-free, no-residual modulation invariant. **Lesson: verify your bottleneck empirically; don't assume an architectural constraint holds.**)
+
+**(b) The sequencing: 1a → 1b → 1c.** One component at a time:
+
+- **1a:** do fine-grained operation primitives emerge *at all*, in a *flat* mixture (no chaining)?
+- **1b:** do *composed*, multi-step operation programs emerge, and do their motifs stay consistent (S1)?
+- **1c:** does tree/DAG composition help? *(deferred.)*
+
+The PASS bar was deliberately **absolute**: operation selectivity had to beat **four** controls (random label, topic, token-type/length, geometry shuffle), not just a relaxed ceiling.
+
+### Experiments, results & interpretation
+
+- **1a (flat, logic-QA: LogiQA 2.0 + ReClor) → weak-ceiling negative.** Selectivity sat barely above chance (~0.05). The diagnostic that mattered: the **question stem alone** predicts the answer-type at a 0.98 ceiling. **Every problem announces its own single operation.** There is *no composition to discover*. The corpus is a **single-operation substrate**. This reframed the next step away from the *model* and toward the *data*.
+- **1b (sequential chain over MuSiQue) → negative on sequential composition.** MuSiQue is multi-hop QA (2–4 hops) where intermediate answers are **hard distractors** and operations are *latent* (not announced). The **substrate is healthy** (the flat model reaches **~0.598** validation accuracy), but the sequential chain **discovers no adaptive depth** (effective breadth stays flat, `{2,2,2}`) and performs no better than the flat mixture.
+
+**★ Reproduction & self-audit (2026-06-04).** Before building on these negatives, I audited my own evidence and found a gap: most numbers were recorded as prose, and most notebooks were unexecuted skeletons. So I built a one-click reproduction notebook ([`REPRODUCE_ALL.ipynb`](REPRODUCE_ALL.ipynb)) and re-ran every experiment from scratch on an A100. **All three negatives reproduced, and 1b got *stronger*:**
+
+| claim | documented | measured (re-run) | verdict |
+|---|---|---|---|
+| Phase 1 (Engine-A) F3 selectivity (adj_op) | 0.176 | **0.176** (verdict FAIL) | ✅ reproduced exactly |
+| 1a operation gate | weak, < ceiling | all σ-gates **FAIL**, op_gate < ceiling | ✅ weak-ceiling reproduced |
+| 1b sequential depth | `{2,2,2}` non-monotone | `chain_steps=4` × **3 seeds** → all `{1,1,1}` non-monotone | ✅✅ confound rebutted, negative **strengthened** |
+| SimBench base-rate (was it just a ceiling?) | — | random 0.30 / majority 0.38 / model 0.70 | ✅ **+32pp**, not a ceiling |
+| "+1pp over no-MoE on reconstruction" | superiority | all runs converge ~0.867 → **+0.0** | ⚠️ **did not reproduce** (claim weakened) |
+
+The 1b row is the important one: the earlier audit's top worry was that testing only `chain_steps=3` on 4-hop problems *structurally biased* the result toward negative. Re-running at `chain_steps=4` across three seeds **rebutted that confound directly**. The negative held, and is now better-supported.
+
+### Remaining tasks
+
+**Direction 1: parallel co-activation.** A negative on *sequential* composition is **not** a negative on *parallel* composition. The flat mixture already activates ~5 experts *simultaneously*, and that simultaneous co-activation **is itself a distribution over operations**: exactly the `G_u` the project set out to model. The sequential chain was, in hindsight, a detour. The plan is to test parallel co-activation directly via **causal lesioning** (turn off one putative operation; does accuracy drop *only* on problems that need it?) plus motif-consistency, which connects forward to the **S1** falsifier. The intervention/lesion/swap harness is already built and tested in [`phase1_5/`](phase1_5).
+
+**Honest residual limitations:** the tested chain depth (`L=3`) is shallower than the deepest 4-hop problems; the **frozen** `e5` encoder caps MC accuracy around ~0.55, leaving little headroom, so the model may be *memorizing* artifacts rather than feeling genuine compositional pressure. The frozen-encoder rule (which keeps results attributable) may itself be the deeper bottleneck.
+
+---
+
+## 5. Phase 2 — a genuine per-user distribution *(planned)*
+
+Everything above shares a **single** `G` across all "users." This tests the *architecture's* value, not personalization. Phase 2 adds the per-user axis: a true per-user activation distribution `G_u` plus context-conditional modulation `λ_u`, isolated as a minimal `use_user=True` ablation over the same architecture.
+
+This is framed as **persona / cognitive user-modeling, not preference prediction** — the project models *how* a person reasons about the same facts, not *what* they prefer. So Phase 2 is not pitched on preference-accuracy leaderboards (that is the supervised-signal field's turf); its intended value is on axes the field actually cares about:
+
+- **Headline = sample-efficiency / cold-start.** The mechanism is learned once from the whole corpus; per-user cost is only the activation distribution `G_u`. If `G_u` matches a per-user adapter (OPPU/Per-Pcs) at a *smaller* per-user data budget, that is the top-tier contribution — to be shown with a controlled per-user data-budget head-to-head, not assumed.
+- **Interpretable + comparable.** A `K`-dim activation distribution is comparable, auditable, and controllable across users; an opaque adapter or embedding is not.
+- **Evaluated by user-simulation / persona-faithfulness**, with preference-accuracy reported only as a secondary baseline.
+- **Entry criterion:** Phase 2 only begins once the architectural value (Phase 1/1.5) is established, since otherwise per-user gains can't be attributed.
+- **The falsifier (S1) lives here:** the same operation expert, active across different users, must produce a similar sub-KG signature. If it doesn't, the "universal mechanism" reduces to `K` user-specific subnetworks and the design is falsified. This is what makes the framing load-bearing rather than decorative.
+
+---
+
+## Summary — what each negative bought
+
+| Experiment | Falsified | Bought |
+|---|---|---|
+| Phase 1 (reconstruction) | "Reconstruction yields operation specialization" | The objective pivot to answer-prediction + the information bottleneck |
+| 1a (flat, logic-QA) | "Operations emerge on any reasoning corpus" | Located the failure in the **corpus** (single-op substrate) → move to multi-hop |
+| 1b (sequential chain, MuSiQue) | "*Sequential* chaining is the right inductive bias" | Pointed back to **parallel co-activation** = the original `G_u` formulation |
+
+All three negatives were **independently reproduced from scratch on 2026-06-04** (`REPRODUCE_ALL.ipynb`). None of these produced a triumphant positive result, and that's an honest description of a real research process. The value is in *which* hypotheses got cleanly ruled out, and why.
 
 ---
 
 ## Tech stack
 
 - **Language / framework:** Python, PyTorch
-- **Encoder:** frozen sentence encoder (`e5-large-v2`, 1024-dim) — **no LLM in the training loop**; everything is embedding-level + multiple-choice scoring
+- **Encoder:** frozen sentence encoder (`e5-large-v2`, 1024-dim), with **no LLM in the training loop**; everything is embedding-level + multiple-choice scoring
 - **Router:** ReMoE-style gate (ReLU experts + an adaptive L1 controller targeting a small active set, `K_active ≈ 4`)
-- **Decoder:** gated low-rank hypernet modulation with a strict **no-bypass** invariant (if the operation activation is zero, the output is zero — so the passage can't leak around the bottleneck)
+- **Decoder:** gated low-rank hypernet modulation with a strict **no-bypass** invariant (if the operation activation is zero, the output is zero, so the passage can't leak around the bottleneck)
 - **Objective:** multiple-choice cross-entropy (contrastive over 4 candidates)
-- **Datasets:** Phase 1 — 7 diverse text sources (Reddit, Pennebaker, PANDORA, PersonaChat, ROCStories, αNLI, SocialIQA); Phase 1.5 — LogiQA 2.0 + ReClor (single-op control) and **MuSiQue** (multi-hop / compositional)
-- **Engineering hardening:** OOM-safe per-token expert batching, Herfindahl load-balancing, chance-normalized selectivity probes with control baselines, causal lesion/swap intervention harness — all test-driven (≈190 tests in `phase1_5/`)
+- **Datasets:** Phase 1 uses 7 diverse text sources (Reddit, Pennebaker, PANDORA, PersonaChat, ROCStories, αNLI, SocialIQA); Phase 1.5 uses LogiQA 2.0 + ReClor (single-op control) and **MuSiQue** (multi-hop / compositional)
+- **Engineering hardening:** OOM-safe per-token expert batching, Herfindahl load-balancing, chance-normalized selectivity probes with control baselines, causal lesion/swap intervention harness, all test-driven (≈190 tests in `phase1_5/`)
 
 ---
 
@@ -79,6 +183,7 @@ The throughline: each negative result was **informative**. Phase 1 falsified "re
 ```
 personal-cognitive-routing/
 ├── README.md                     ← you are here
+├── REPRODUCE_ALL.ipynb           ★ one-click from-scratch reproduction of every experiment
 ├── docs/
 │   ├── research-journey.md       ★ the full "what I tried / why it failed" story
 │   ├── vision.md                 the paradigm & architecture in depth
@@ -108,7 +213,9 @@ pip install torch numpy datasets sentence-transformers pytest
 pytest phase1_5/tests -q        # unit tests (no GPU required)
 ```
 
-Heavy artifacts (`*.npy`, `*.parquet`, checkpoints, reference PDFs) are intentionally git-ignored — they rebuild from the data loaders and training code.
+**Full reproduction.** [`REPRODUCE_ALL.ipynb`](REPRODUCE_ALL.ipynb) re-runs every experiment from scratch and writes every number to a single `out/VERIFICATION.json` (documented value vs. freshly-measured value). Upload this repo to Google Drive, open the notebook in Colab, set the `BASE` variable at the top to the repo's root folder (the directory containing `phase1/` and `phase1_5/`), and Run-All. A GPU is required; sections are independently guarded so a partial run still produces partial results.
+
+Heavy artifacts (`*.npy`, `*.parquet`, checkpoints, the generated `out/` tree, reference PDFs) are intentionally git-ignored, since they rebuild from the data loaders and training code.
 
 ---
 

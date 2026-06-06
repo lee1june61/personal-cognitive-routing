@@ -1,168 +1,79 @@
-# Lit Review — MASTER (Phase 1.5 lens) · positioning against prior work
+# Literature Review — a graded gap map (where to aim, what to claim, what to borrow)
 
-> ℹ️ **Reproduced working note (bilingual).** Annotated positioning of this project against ~38 papers, re-verdicted under the Phase 1.5 lens (answer-prediction · information bottleneck · emergent neural module networks · single logic domain). Included for transparency; some cross-references point to the private working repo. Public entry points: [README](../README.md), [`research-journey.md`](research-journey.md).
-
-> **목적**: 5-27 master 를 *Phase 1.5 lens* (answer-prediction · info-bottleneck · emergent NMN · 단일 logic 도메인 · K=128) 로 재verdict + targeted WebSearch 의 신규 카드 통합. 단일 진실 원천.
+> ℹ️ **Reproduced working note.** Annotated positioning of this project against prior work, organized as a *graded gap map*. This is the current positioning doc (2026-06-06); it replaces an earlier Phase-1.5 thematic review that framed the target as a *sequential* neural module network — that direction was falsified (see [research-journey](research-journey.md)), so the positioning here is built around **parallel co-activation** and a **persona, not preference** framing. Public entry points: [README](../README.md), [research-journey](research-journey.md), [vision](vision.md), [glossary](glossary.md).
 >
-> **historical**: `LIT_REVIEW_MASTER_2026-05-27.md` (recon-cycle lens) 보존 — 카드 본체·arXiv ID 가 그쪽에 있고 본 문서는 *verdict 갱신 + 신규 카드 추가* 중심. 양쪽 참조.
+> **Framing (no novelty claim).** Every single axis below is occupied by prior work; what is underexplored is their *conjunction*, framed as *forced* by the project's C0–C3 commitments. Positioning is by **axis** (supervised vs unsupervised; predefined vs emergent), never "they treat the user as a whole object." Negative results to date are a maturity signal about how hard the precondition is.
 >
-> **verdict 범례**: ★★ TIER-1 직접 precedent / forced-design 핵심 인용 · ★ STILL-LOAD-BEARING · ◐ PARTIAL · ✗ OBSOLETE (Phase 1.5 에서). arXiv ID 는 5-27 master 와 본 §6 신규 카드 verbatim.
+> **Card format:** `[arXiv ID] Title — one-line verdict — TAG`, `TAG ∈ {adopt, beat, contrast, borrow-infra, borrow-target}`. **adopt** = import the technique; **beat** = baseline to outperform/differentiate; **contrast** = foil; **borrow-infra** = reuse plumbing, no claim; **borrow-target** = take the question, not the method.
 
 ---
 
-## §1. Positioning (Phase 1.5, 2026-05-28)
+## §A. Where we aim — underexplored, well-posed sub-questions
 
-**모든 메커니즘 점유** — novelty 주장 = "empty seat" 아닌 **forced-design configuration + 경험적 결과**. Phase 1.5 의 핵심 입장:
+### A1 — Unsupervised emergence of *interpretive operations* (not predefined, not supervised)
 
-1. **C0 single commitment 의 연역 사슬 (paradigm)**: C0(structural decomp) → C1(G_u) → C2(KG-as-output) → C3(observable-text target). [C3] sharpening 으로 answer-prediction 이 정당 인스턴스 (vision §6.1, 5-28).
-2. **"Explicit pressure 필요"의 학계 합의**: Iterated Learning (2105.01119) 가 직접 명시 — "NMN 의 compositionality bias 만으론 emergent layout X, explicit pressure 필요." 우리 3 prior (NMN modules emergent · MC hard-negative · info-bottleneck modulation) 가 정확히 그 explicit pressure. **우리 설계의 lit-grounded 정당화 = 이 카드.**
-3. **Conditional IB-for-reasoning 의 학계 이름**: Reasoning as Compression (2603.08462) — "reasoning trace = computational bridge containing only information about response not directly accessible from prompt". **우리 info-bottleneck (Q-only · P side-channel · KG modulation) 의 학계 정확한 이름이 Conditional IB. paradigm 의 가장 직접 precedent.**
-4. **Labeled counterpart**: MiCRo (2506.13331) — brain-like supervised modular reasoning. 우리 unsupervised emergence vs MiCRo supervised 가 직접 비교축.
-5. **단일도메인 logic 정당화**: LogiQA/ReClor MC 의 distractor 가 same-context-different-reasoning hard-negative → operation isolation 의 ideal corpus.
+The nearest work supervises the operation set (P-React: Big-Five labels) or hand-defines it (DS-MoE: shallow/compositional/logical experts); Expert Strikes Back *observes* expert≈operation post-hoc in a pretrained LM but neither induces nor verifies it. Inducing operations with no operation labels, and verifying them, is the open part.
 
-**경계 (Phase 3, 안 함)**: AdaLoGN (2203.08992) = neural-symbolic explicit logic graph. 우리 latent operation-KG 와 대비축, Phase 3 readout 시 거리 측정 대상.
+- `[2105.01119]` Iterated Learning for Emergent Systematicity (ICLR 2021) — compositional structure needs *explicit pressure*; our bottleneck + hard-negatives is that pressure — **adopt**.
+- `[2509.10025]` SMoE-VAE — unsupervised routing finds structure beyond label boundaries — **adopt**.
+- `[2603.08462]` Reasoning as Compression / Conditional IB — the formal name for our bottleneck — **adopt**.
+- `[2509.20577]` DS-MoE / Dynamic Reasoning Chains — same target, but expert *types predefined* — **beat**.
+- `[2406.12548]` P-React — operation-like experts tied to Big-Five *labels* — **beat**.
+- `[2202.08906]` ST-MoE — left alone, specialization drifts to token-type/topic — **contrast**.
 
----
+### A2 — Per-user routing that is *unsupervised AND read as cognitive structure*
 
-## §2. Thematic Bibliography (Phase 1.5 verdict)
+Per-user routing infrastructure already exists and is, in representation, close to our `G_u`. The missing axis: existing per-user routers are trained on **supervised preference/domain** signal and aren't read as a cognitive-operation decomposition.
 
-### 2.1 Cycle / Dual Learning (★→◐ — recon-cycle 대비축으로 강등)
-- ★→◐ He (2016) Dual Learning · Guo (2020) **CycleGT** · Xu (2023) INFINITY · Wang (2023) Faithful Data-to-Text
-  → input=output autoencoder 형. 우리 answer-prediction 으로 분기 = *직접 선례 아닌 대비 카드*. forced-design framing 의 "이전 가정"으로 인용 (C3 의 미서술 가정 부분).
+- `[2503.01658]` CoPL (ICLR 2025) — shared LoRA expert + individual experts, user-preference gate ≈ our Phase-2 `use_user=True` — **borrow-infra** / **beat** (supervised axis).
+- `[2409.13931]` CoMiGS — per-user routing over generalist/specialist experts + an emergent-role analysis worth reusing — **borrow-infra**.
+- `[2510.08256]` Mix-/MoE-DPO — gate-side personalization without retraining experts (multi-preference, not per-user-identity exclusive) — **borrow-infra**.
+- `[2402.04401]` OPPU · `[2406.10471]` Per-Pcs — isolated-module pole — **contrast**.
 
-### 2.2 MoE foundations & routing (★ 유지)
-- ★ Shazeer (1701.06538) · Fedus Switch (2101.03961) · Dai DeepSeekMoE (2401.06066) · Laha Sparsegen (1810.11975) · Wang ReMoE (2412.14711) · Peters α-entmax (1905.05702) · Sparsemax (2016)
-- ◐ Lepikhin GShard · Zhou Expert Choice · Puigcerver Soft MoE · Huang Harder Tasks · Zeng AdaMoE · Guo DynMoE · Antoniak MoT · Hazimeh DSelect-K · Zhuang LD-MoLE · Chen SIMoE · Fedus MoE++
-- ★ aux-loss-free LB (2408.15664) · normalized sigmoid gating ❓
-- **5-28 추가**: Phase 1.5 K=128 router 선택 후보 = ReMoE / α-entmax / sparsegen. 1a 시작은 Phase 1 의 sparsegen 그대로 (v6 검증), 1a 진행 중 swap-ablation.
+### A3 — Corpus design that *isolates operation from topic* and forces composition
 
-### 2.3 Emergent / unsupervised expert specialization (★★ 유지·강화)
-- ★★ Nikolic **SMoE-VAE** (2509.10025) — 핵심 anchor 유지. 단 mechanism = recon → **answer-pred** 로 교체 (Phase 1.5 sharpening).
-- **★→◐ Chu ADaMoRE** (2510.21207) — "reconstruction-primary + diversity" anchor 였으나 recon-primary 자체가 Phase 1.5 에서 대체됨. 인접 카드로 강등 (diversity 부분만 유지).
-- ★ Han/Liu (2505.22323) Advancing Expert Specialization
-- ★ Zhang **MoMoK ExID** (2405.16869) — S1 contrastive-MI 선례 유지
-- ★ Feng **CoMoE** (2505.17553) · Tsai MiCE (2105.01899)
-- ◐ Chen OMoE (orthogonal) · Shi MMVAE · Bristol MixER
+Most reasoning corpora announce the operation (logic-MC stem ceiling ~0.98) or use a single operation, so they never force separating *how* from *what*. This was the root cause of the 1a negative.
 
-### 2.4 Expert trajectory / sequence / composition (★→★★ — Phase 1.5 1b target 그 자체)
-- **★★ Polysemantic Experts, Monosemantic Paths** (2604.17837) — 1b 활성 path 의 *해석 단위* 정통 precedent.
-- **★★ Route Experts by Sequence, Not Token** (2511.06494) — per-token cycle 의 sequence-level readout 근거.
-- **★★ Chain-of-Experts** (2506.18945) — **1b graph-router 의 직접 architectural precedent**.
-- **★★ Andreas et al. NMN over-text** (1912.04971) · **NMN structure-learning** (1905.11532) — **emergent NMN target 의 정통 라인**. Phase 1.5 의 우리 입장 = 이들의 *unsupervised end-to-end emergent* 변형.
-- ★ Hao **Coconut** (2412.06769) — latent reasoning trajectory.
+- `[2108.00573]` MuSiQue (TACL 2022) — anti-shortcut multi-hop (single-hop model −30 F1), intermediate-answer distractors, latent operations — **adopt** (the project's main compositional corpus).
+- *(open)* An operation-vs-topic *isolation* corpus has no clean off-the-shelf instance; building one is part of the contribution surface.
 
-### 2.5 Verification — probing / interpretability / selectivity / geometry (★★/★ 유지)
-- ★★ Hewitt-Liang **Control Tasks / selectivity** (1909.03368) — Engine-A 핵심 metric, Phase 1.5 1a/1b gate.
-- ★★ **Myth of Expert Specialization** (2604.09780) — geometry control 필수.
-- ★★ Zoph **ST-MoE** (2202.08906) — token-type 경고. Phase 1.5 selectivity 가 4 control 로 직접 차단.
-- ★ Lo **POS Sensitivity** (2412.16971) · Templeton Scaling Monosemanticity · Bricken Monosemanticity (transformer-circuits.pub)
-- ★ Herbst Expert Strikes Back ❓ · Yan What Gets Activated ❓
-- **★★→★★ Stuhr & Brauer** (2009.02383) **Objective Mismatch** — Phase 1 F3 collapse 의 *학계 정확한 이름*. forced-design framing 의 핵심 인용 ★★. (5-28 originally mis-attributed as "Loaiza-Ganem"; corrected at Stage 5 of academic-pipeline run 2026-05-28 — actual authors per arXiv = Bonifaz Stuhr & Jürgen Brauer, *Don't miss the Mismatch*, 2020-09-04.)
-- ◐ Elhage / Olsson Induction Heads / Tenney BERT pipeline / Conmy / Geva / Gurnee / Belinkov & Glass
+## §B. What we are positioned to claim — a methodology gap the field calls open
 
-### 2.6 Scaling (★ — Phase 1.5 K=128 직접 anchor 로 승격)
-- **★ Ludziejewski** (2402.07871) Scaling Laws Fine-Grained MoE — G≈8.
-- **★ DeepSeek-V2** (2405.04434) — K_routed=64.
-- **★ DeepSeek-V3** (2412.19437) — K_routed=256 (Phase 1.5 K=128 의 sweep target).
-- **★ Muennighoff OLMoE** (2409.02060) · Nguyen Statistical Benefits Shared Experts (2505.10860).
-- ◐ Mixtral · Chinchilla · Kudugunta task-MoE.
+### B1 — A *causal* battery that decides whether an expert is a reasoning OPERATION or a topic/shortcut
 
-### 2.7 Personalization (◐ — Phase 2 deferred 유지)
-- ◐ OPPU (2402.04401) · Per-Pcs (2406.10471) · P2P (2510.16282) · DEP (2507.20849)
-- ◐ MoPE · FLEx · Facet-Aware · Facet-Level SAE · Mixture-of-Tastes · PROPER · P-React · Personality Subnetworks · MoLE
-- ✗ LaMP / LongLaMP
+The field mostly shows "experts cluster by *something*" — usually topic/token-type (ST-MoE; POS-sensitivity). Rare is a *causal* test: lesion a candidate operation → selective accuracy drop only on problems that need it, plus operation-vs-topic disentanglement and motif-consistency. B1 is the tool that turns "experts specialized" into "experts specialized *by operation*" — a results-independent contribution candidate, framed as proof-of-success (not a "valuable either way" hedge).
 
-### 2.8 Injection (★→◐ — Engine-B deferred, Phase 1.5 = MC-contrastive LLM-free)
-- ◐ BLIP-2 · Frozen · Persistent Memory · Graph-as-Memory Cross-Attn (Phase 1.5 통과 후)
-- ◐ Prefix-Tuning · Prompt Tuning · Knowledge Prompts · ActAdd · CAA
-- ◐ KnowLA · KG-Adapter · GRIP · Text-to-LoRA · HypeLoRA (1b modulation 형태 후보 카드 — FiLM 대안)
-- **★ FiLM 검토 필요 (5-27 master 누락)** — Perez (2017) Feature-wise Linear Modulation, modulation 의 정통 precedent. §6 신규 카드 후보.
+- `[1909.03368]` Hewitt & Liang, control tasks / selectivity — **adopt**.
+- `[2604.09780]` The Myth of Expert Specialization — mandatory geometry control — **adopt**.
+- `[2604.02178]` Herbst et al., The Expert Strikes Back (ICML 2026) — peer-reviewed evidence that experts carry operations (feasibility, not proof of *emergence*) — **adopt**.
+- `[2012.14913]` Geva (FFN key-value) · `[2304.14997]` Conmy (ACDC) — causal localization / patching methods — **adopt**.
+- `[2009.02383]` Stuhr & Brauer, objective mismatch — names why a content-rewarding objective never yields an operation axis — **contrast** (diagnostic).
 
-### 2.9 Symbolic KG grounding (✗(now)/◐(Phase 3) 유지)
-- ✗(now)/◐(Phase 3) GraphRAG · Think-on-Graph · QA-GNN · GreaseLM
-- **5-28 추가**: **★ AdaLoGN (2203.08992)** — LogiQA/ReClor 의 neural-symbolic SOTA. **Phase 1.5 의 *명시적 대비축*** (우리 latent vs AdaLoGN 명시 logic graph). Phase 3 readout 시 거리 측정 대상. §6 신규.
+## §C. Borrow but do not claim
 
-### 2.10 KG construction / representation (◐ 유지)
-- ◐ REBEL · EDC ❓ · HyperRED · COKE · VGAE · Gumbel-Softmax · Latent Mixture (2605.02780)
+**Infrastructure (borrow-infra):** Chain-of-Experts `[2506.18945]` (sequential chaining — note: the project's *sequential* variant was falsified; this remains an architectural reference only) · N2NMN `[1704.05526]` · Stack-NMN `[1807.08556]` (operations-as-program lineage) · Sparse-MoE `[1701.06538]` · Switch `[2101.03961]` · DeepSeekMoE `[2401.06066]` · ReMoE `[2412.14711]` (routing substrate/math).
 
-### 2.11 Cognitive-science grounding + labeled counterpart (Phase 1.5 입장 변화)
-**Decomposition warrant**: Cummins · Marr · Bechtel & Richardson · Craver · Piccinini · Fodor · Carruthers · Spelke Core Knowledge (★ paradigm §1)
-**Pluralism warrant**: Poldrack & Yarkoni · Sullivan · Burnston (★ unsupervised-discovery 정당화)
-**Per-user axis 대비**: Per-Pcs / OPPU · Lee 2025 NHB belief embedding ❓
-**Operation ontology (Phase 3 deferred)**: Schank · image schemas (Lakoff/Johnson/Wachowiak) · Talmy · FrameNet · Halford · Cognitive Atlas · ACT-R · VerbNet · Bloom · Baddeley · SOAR · Kelly PCT ✗(footnote)
-**Belief/structure in nets**: Shai Belief Geometry · Park Linear Representation · Yarkoni Neurosynth
-- **◐→★★ MiCRo** (AlKhamissi 2506.13331) — **Phase 1.5 의 *직접 labeled counterpart*** 로 승격. brain-like 4-expert supervised modular reasoning. 우리 unsupervised emergence 의 비교축 = MiCRo. ablation only 가 아닌 **paper level head-to-head 후보**.
-- **★→★ Concept Bottleneck** (Koh 2007.04612) — supervised CBM 의 bottleneck-for-prediction. 우리 = unsupervised + reasoning-type bottleneck. 직접 precedent 로 승격.
-- **5-28 신규**: **★★ Reasoning as Compression — Conditional IB** (2603.08462) §6.
-- ◐ MoE-as-embedding (Li & Zhou 2410.10814)
+**Baselines to beat:** MiCRo `[2506.13331]` (supervised modular reasoning — the labeled twin) · P-React `[2406.12548]` · CoPL `[2503.01658]`.
+
+**Contrast foils:** Lee 2025 (Nature Human Behaviour, flat belief vector) · OPPU `[2402.04401]` · Per-Pcs `[2406.10471]` · ST-MoE `[2202.08906]` / POS-sensitivity `[2412.16971]`.
+
+**Adjacent — borrow the target/paradigm, not the method (borrow-target):** PB&J `[2504.17993]` (reasoning behind a user's judgment via psychological scaffolds + LM rationales — borrow the *target*, not the supervised-rationale method) · AI-psychometrics `[2505.08245]`/`[2406.17675]` (borrow the *psychometric-validity paradigm*; that field measures the *model's* psychology, so adapt the validation paradigm to per-user cognitive style).
+
+## §D. The real target — the integration, and why B1 makes it count
+
+Each single axis is borrowable: per-user mixtures (A2), operation-experts (A1/B1), unsupervised specialization (A1), composition substrate (A3), verification primitives (B1). What no line instantiates is the **conjunction**: A1 (unsupervised emergent operations) × A2 (a per-user activation distribution read as cognitive structure) × B1 (a causal test that the experts are operations), with **KG-as-output** as the deferred Phase-3 telos. This is "combination novelty" — the weakest kind on its own — which is exactly why the project doesn't lead with it. The load-bearing move is B1: the integration earns its keep only if the causal battery shows the combined design *buys something* a flat or supervised baseline does not.
+
+### Positioning & evaluation — persona, not preference
+
+The framing is *cognitive persona / user-modeling*, not preference-prediction personalization. Preference accuracy (LaMP, recommendation, preference data) is exactly where the project is weak — that turf belongs to supervised methods (CoPL/OPPU/P-React) that hold a preference signal the project doesn't. Read as persona/cognitive user-modeling, the strengths land on axes the field actually cares about, and the evaluation is set accordingly:
+
+- **Primary headline = sample-efficiency / cold-start.** Mechanism learned once from the corpus; per-user cost is only `G_u`. If `G_u` matches per-user adapters at a smaller per-user data budget, that is the top-tier contribution — shown via a *controlled per-user data-budget head-to-head* (vs OPPU/Per-Pcs), not assumed.
+- **Interpretability / comparability / auditability** — a `K`-dim activation distribution is comparable and auditable across users; opaque adapters/embeddings are not.
+- **Evaluation axis = user-simulation / persona-faithfulness**; preference-accuracy is reported only as a secondary baseline. (Defining the user-simulation protocol is itself part of the Phase-2 work — it is less standardized than preference leaderboards.)
+- **Field trajectory.** The field is moving from flat preference vectors toward psychology/reasoning-grounded persona (PB&J; AI-psychometrics). This project pushes one step further — an *emergent, comparable operation decomposition* — so it has an audience and is not empty (the sub-field is converging fast).
+
+> One-line: persona/cognitive user-modeling is a timely bet with real strengths (efficiency, interpretability); "beating preference prediction" is a weak bet fought on a supervised field with an unbuilt mechanism. Same research, framing decides its fate.
 
 ---
 
-## §6. 신규 카드 (2026-05-28 WebSearch GAP 통합)
-
-### 6.1 ★★ **Reasoning as Compression: Unifying Budget Forcing via the Conditional Information Bottleneck** — arXiv:2603.08462
-- CoT 생성을 Conditional IB 로 모델링. **"reasoning trace = computational bridge containing only the information about the response not directly accessible from the prompt."**
-- **우리 Phase 1.5 의 학계 정확한 이름** — info-bottleneck (Q-only · P side-channel · KG modulation) 가 정확히 Conditional IB(Q→bottleneck→A 에서 P 는 conditioning). KG = reasoning trace 의 latent 버전.
-- **forced-design framing 의 가장 강한 인용** — Phase 1.5 info-bottleneck 이 임의가 아니고 *학계 정통 IB 의 reasoning instantiation*.
-
-### 6.2 ★★ **Iterated Learning for Emergent Systematicity in VQA** — arXiv:2105.01119
-- 핵심 finding: "NMN 의 compositionality bias 만으론 emergent layout X. layout+module joint learning 시 **explicit pressure 필요**."
-- **우리 3 prior (NMN modules emergent · MC hard-negative · info-bottleneck modulation) = 정확히 그 explicit pressure** — paper 의 design 이 lit-grounded 라는 정당화.
-- **Phase 1.5 의 "왜 단일 도메인 + K=128 + bottleneck 셋이 다 필요한가" 학계 정답**: emergent layout 은 자발 X, 강한 inductive bias 필요. 우리는 그것을 architecture + corpus 양쪽으로 박음.
-- **gate FAIL 시 framing**: "explicit pressure 다 깔고도 안 됨 = 학계 open problem 의 강한 negative". PASS 시 framing: "explicit pressure 조합의 경험적 성공 evidence".
-
-### 6.3 ★ **End-to-End Module Networks (N2NMN)** — arXiv:1704.05526
-- Hu et al. layout 을 parser 없이 직접 예측. 단 imitation (expert demonstrations) + downstream loss 사용.
-- 우리 = imitation 없이 (operation label 없이) downstream answer-pred loss + info-bottleneck 만. **더 약한 supervision**.
-- 직접 architectural precedent + 우리와 supervision 강도 차이 명시 인용.
-
-### 6.4 ★★ **AdaLoGN — Adaptive Logic Graph Network** — arXiv:2203.08992
-- LogiQA/ReClor 에서 **neural-symbolic explicit logic graph** 로 추론. message passing on relation graph.
-- **Phase 1.5 의 직접 대비축**: 우리 latent operation-KG vs AdaLoGN explicit logic graph. *같은 corpus(LogiQA/ReClor), 다른 KG 표현*.
-- Phase 1.5 gate PASS 후 Phase 3 readout 의 거리 측정 대상 (latent → explicit 사상 가능성).
-- LogiQA SOTA 추적의 reference point.
-
-### 6.5 ★ **LogiQA 2.0** — TASLP 2023 (Liu et al.) — `dl.acm.org/doi/10.1109/TASLP.2023.3293046`
-- LogiQA 원본 dataset 의 cleaned/expanded 버전. Phase 1.5 corpus 선택 시 v2 사용 검토.
-
-### 6.6 ◐ **Graph-Integrated Multimodal Concept Bottleneck Model** — arXiv:2510.00701
-- CBM + graph transformer 로 answer-concept / answer-question graph 구성. 우리 1b graph router 의 multimodal precedent.
-- Phase 1.5 1b 형태 결정 시 reference.
-
-### 6.7 ★ **Stack Neural Module Networks** — arXiv:1807.08556
-- NMN 의 stack-based composition. 1b chain depth 선택 시 reference.
-
-### 6.8 ★ **Information Bottleneck (foundational)** — Tishby, Pereira & Bialek (1999/2000)
-- IB principle 의 원전. Conditional IB 의 base. 인용 anchor.
-
----
-
-## §7. 5-27 → 5-28 verdict delta summary
-
-**승격 (★ → ★★)**:
-- Stuhr & Brauer Objective Mismatch (Phase 1 F3 의 학계 이름; mis-attributed as "Loaiza-Ganem" pre-Stage 5)
-- §2.4 trajectory 카드 4종 (Polysemantic-Paths, Route-by-Seq, CoE, NMN ×2) — 1b target 그 자체
-- MiCRo (labeled counterpart → 직접 비교축)
-
-**강등 (★ → ◐)**:
-- §2.1 Cycle/Dual (CycleGT, Dual Learning) — input=output autoencoder, 대비축으로
-- §2.3 ADaMoRE — "recon-primary anchor" 가 Phase 1.5 에서 교체됨
-- §2.8 Injection 전반 — Engine-B deferred (Phase 1.5 = LLM-free MC-contrastive)
-
-**◐ → ★ 승격**:
-- Concept Bottleneck (CBM) — 우리 bottleneck-for-prediction 의 supervised counterpart
-
-**신규 ★★ (5-28 WebSearch)**:
-- **Reasoning as Compression / Conditional IB** (2603.08462) — info-bottleneck 의 학계 이름
-- **Iterated Learning Emergent Systematicity** (2105.01119) — explicit pressure 정당화
-- **AdaLoGN** (2203.08992) — LogiQA/ReClor neural-symbolic 대비축
-
-**신규 ★**: N2NMN (1704.05526) · LogiQA 2.0 · Stack NMN (1807.08556) · IB foundational (Tishby)
-
----
-
-## §8. Citation-check (5-27 master §3 그대로 유지)
-신규 카드 arXiv ID 6.1~6.7 = WebSearch 결과 verbatim (preprint 상태 미검증, paper write 전 재확인 필요). Tishby IB = 원전 1999/2000, exact venue 확인 권고.
-
-## §9. Archived
-5-27 master + 그 § 4 의 모든 sub-archive 그대로. Phase 1.5 historical = `LIT_REVIEW_MASTER_2026-05-27.md`.
+*The full internal corpus (per-paper verdicts, ~38 cards, citation-check) lives in the private working repo; this is the public positioning synthesis. All arXiv IDs here were web-confirmed 2026-06-06.*

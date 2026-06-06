@@ -1,3 +1,5 @@
+> ℹ️ **Reading-list (paradigm descriptor dated 2026-05).** Curation 의 "v2 paradigm (cycle reconstruction primary, K=8-12)" 서술은 옛 era. 현 paradigm = answer-prediction · K=128 · direction-1 parallel co-activation · causal-S1 ([vision](vision.md), [glossary](glossary.md)). 본 목록은 정독 후보 reference.
+
 # Curated reading list — v2 paradigm
 
 > ℹ️ **Reproduced working note (bilingual).** A curated list of papers organized by role in the project. The PDFs themselves are not included in this repository (large, re-downloadable from arXiv); this preserves the organization and rationale. Public entry points: [README](../README.md), [`research-journey.md`](research-journey.md).

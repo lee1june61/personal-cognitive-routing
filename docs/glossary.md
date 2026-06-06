@@ -12,6 +12,15 @@
 - **C2** — operation 의 결과물 = cognitive output ⟹ **KG 는 입력이 아니라 출력**. (외부 KG 위 edge selection = v1 의 실수.)
 - **C3** — KG 가 출력 ⟹ 외부 ground-truth KG 없음 ⟹ supervised KG 학습 봉쇄 ⟹ **학습 신호는 관측 가능한 텍스트에서만**.
 
+### Positioning & 평가축 (persona, not preference — 2026-06-06)
+- **Personalization 선행 = 3분류** (whole-object 단정 금지): ① flat embedding (Lee 2025) · ② isolated adapter (Per-Pcs, OPPU) · ③ **shared-expert + per-user mixture** (CoPL, CoMiGS, Mix-/MoE-DPO). ③은 표상이 우리와 거의 같음. **차별점 = architecture 가 아니라 *축*** — ③은 supervised preference/domain, 우린 *unsupervised interpretive-operation* + KG-as-output.
+- **persona, NOT preference**: 이건 preference-prediction personalization 이 아니라 인지-기반 persona/user-modeling. preference-accuracy 리더보드(supervised 운동장)로 팔지 않음. **primary 평가축 = user-simulation/persona-faithfulness + sample-efficiency/cold-start + interpretability/comparability**; preference 는 보조 리포트만.
+- **proposal-grade**: 단일 기둥 전부 선점, 빈 건 *조합*(약한 novelty) → **novelty 주장 금지**, "덜 탐색된 잘 선 질문 + 결과-독립 검증(B1)". negative = 성숙도.
+
+### Sharpened 가설 (2026-06-06)
+- **Phase 1.5 (active)**: H0 substrate(✓) → H1 parallel co-activation(direction 1 = flat mixture 동시활성 = G_u) → **H2 = B1 gate**(causal selective lesion ∧ operation-vs-topic disentanglement ∧ motif-consistency = headline 기여). 잔여 risk = frozen-e5 천장~0.55.
+- **Phase 2 (deferred)**: H2-eff(sample-efficiency/cold-start, PRIMARY) · H2-interp(K-dim 분포 비교·감사) · H2-sim(user-simulation 평가). S1 falsifier 가 여기 삶.
+
 ## 용어집
 
 ### Cycle reconstruction (C3)
@@ -48,7 +57,7 @@ falsifiable 예측: 같은 expert k 가 다른 user 에서 활성될 때 생성 
 | Phase | 상태 | 본질 |
 |---|---|---|
 | Phase 1 (recon-cycle) | closed (informative negative) | 5-run + Stage1 → recon 이 content/topic 보상해 F3 collapse 구조적. 결과 = Phase 1.5 motivation. |
-| **Phase 1.5** (operation-axis architectural) ★ active | answer-prediction + info-bottleneck + emergent NMN + 단일 logic 도메인 + K=128. Engine-A go/no-go. `RESEARCH_PLAN_2026-05-28_phase1_5.md` 단일 출처. |
+| **Phase 1.5** (operation-axis architectural) ★ active | answer-prediction + info-bottleneck + K=128, **direction-1 parallel co-activation**(순차 NMN NEGATIVE) + corpus **MuSiQue**(LogiQA/ReClor control). Engine-A go/no-go. |
 | Phase 2 (personalization) | deferred (1.5 통과 후) | per-user G_u, use_user=True. |
 | Phase 3 (KG readout) | future | latent → symbolic. |
 
