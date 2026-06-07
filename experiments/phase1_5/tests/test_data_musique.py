@@ -16,7 +16,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from research.demo.phase1_5.data import MCCorpusConfig
+from experiments.phase1_5.data import MCCorpusConfig
 
 
 def _musique_row(
@@ -61,7 +61,7 @@ def _musique_row(
 def test_row_to_record_4hop_uses_intermediates_as_distractors():
     """A 4-hop row has 3 intermediate answers → exactly fills the 3 distractor
     slots with no backfill. The record is valid 4-way MC with answer_idx→gold."""
-    from research.demo.phase1_5.data_musique import _musique_row_to_record
+    from experiments.phase1_5.data_musique import _musique_row_to_record
 
     row = _musique_row(hops=4, gold="1960", intermediates=["Alice", "Bob", "Carol"])
     cfg = MCCorpusConfig()
@@ -77,7 +77,7 @@ def test_row_to_record_4hop_uses_intermediates_as_distractors():
 
 
 def test_unanswerable_row_dropped():
-    from research.demo.phase1_5.data_musique import _musique_row_to_record
+    from experiments.phase1_5.data_musique import _musique_row_to_record
 
     row = _musique_row(hops=4, answerable=False)
     rec = _musique_row_to_record(row, "train", MCCorpusConfig(), answer_pool=None, rng_seed=0)
@@ -87,7 +87,7 @@ def test_unanswerable_row_dropped():
 def test_2hop_without_pool_dropped():
     """2-hop has only 1 intermediate → needs 2 backfill; with no pool the row
     cannot reach 4 unique options and is dropped (never padded with duplicates)."""
-    from research.demo.phase1_5.data_musique import _musique_row_to_record
+    from experiments.phase1_5.data_musique import _musique_row_to_record
 
     row = _musique_row(hops=2, gold="1960", intermediates=["Alice"])
     rec = _musique_row_to_record(row, "train", MCCorpusConfig(), answer_pool=None, rng_seed=0)
@@ -97,7 +97,7 @@ def test_2hop_without_pool_dropped():
 def test_backfill_fills_to_four_from_same_answer_type():
     """2-hop (1 intermediate) back-fills 2 distractors from the same-answer-type
     pool. A DATE gold draws DATE distractors, not entity-type ones."""
-    from research.demo.phase1_5.data_musique import _build_answer_pool, _musique_row_to_record
+    from experiments.phase1_5.data_musique import _build_answer_pool, _musique_row_to_record
 
     pool_rows = [
         _musique_row(hops=2, gold="1885", intermediates=["Xavier"]),
@@ -122,7 +122,7 @@ def test_backfill_fills_to_four_from_same_answer_type():
 def test_leak_guard_excludes_intermediate_equal_to_alias():
     """An intermediate answer that equals a gold ALIAS is a hidden-correct
     distractor → must be dropped (and back-filled), never appear as an option."""
-    from research.demo.phase1_5.data_musique import _build_answer_pool, _musique_row_to_record
+    from experiments.phase1_5.data_musique import _build_answer_pool, _musique_row_to_record
 
     pool = _build_answer_pool(
         [_musique_row(hops=2, gold=g, intermediates=["e"]) for g in ("Paris", "Berlin", "Rome", "Madrid")]
@@ -144,7 +144,7 @@ def test_leak_guard_excludes_intermediate_equal_to_alias():
 
 
 def test_infer_musique_op_label_hop_count():
-    from research.demo.phase1_5.data_musique import infer_musique_op_label
+    from experiments.phase1_5.data_musique import infer_musique_op_label
 
     assert infer_musique_op_label({"id": "2hop__a_b"}) == "2hop"
     assert infer_musique_op_label({"id": "3hop__x"}) == "3hop"
@@ -155,7 +155,7 @@ def test_infer_musique_op_label_hop_count():
 def test_infer_musique_structure_chain_vs_comparison():
     """Chain/bridge: a later sub-question references an earlier answer via '#k'.
     Comparison: independent sub-questions (no '#k' reference)."""
-    from research.demo.phase1_5.data_musique import infer_musique_structure
+    from experiments.phase1_5.data_musique import infer_musique_structure
 
     chain = {
         "question_decomposition": [
@@ -179,7 +179,7 @@ def test_infer_musique_structure_chain_vs_comparison():
 def test_assemble_passage_supporting_first_and_budget():
     """Supporting paragraphs (those a hop relies on) lead, in hop order; the rest
     fill until the word budget (t_cap_p) is exhausted."""
-    from research.demo.phase1_5.data_musique import _assemble_passage
+    from experiments.phase1_5.data_musique import _assemble_passage
 
     row = {
         "paragraphs": [
@@ -213,7 +213,7 @@ def _mc_df(rows):
 def test_distractor_leak_check_flags_question_leak():
     """A planted question→option leak (gold option = the question's words) must
     push question_to_option_acc ≈ 1.0 — this is the GATE's tripwire."""
-    from research.demo.phase1_5.data_musique import musique_distractor_leak_check
+    from experiments.phase1_5.data_musique import musique_distractor_leak_check
 
     rows = []
     for i in range(20):
@@ -230,7 +230,7 @@ def test_distractor_leak_check_flags_question_leak():
 
 def test_distractor_leak_check_near_chance_when_unrelated():
     """Options lexically unrelated to Q/P → both lexical baselines near chance."""
-    from research.demo.phase1_5.data_musique import musique_distractor_leak_check
+    from experiments.phase1_5.data_musique import musique_distractor_leak_check
 
     rng = np.random.default_rng(0)
     vocab = [f"w{k}" for k in range(200)]
@@ -253,7 +253,7 @@ def test_distractor_leak_check_near_chance_when_unrelated():
 def test_load_musique_emits_mc_schema_with_holdout_test(monkeypatch):
     """load_musique → generic 7-col schema; validation→val; a deterministic
     holdout is carved from train into test (MuSiQue has no labelled public test)."""
-    from research.demo.phase1_5 import data_musique
+    from experiments.phase1_5 import data_musique
 
     train = [
         _musique_row(hops=4, gold=str(1900 + i), intermediates=[f"A{i}", f"B{i}", f"C{i}"])
@@ -284,7 +284,7 @@ def test_build_mc_corpus_dispatches_to_musique(monkeypatch, tmp_path):
     """build_mc_corpus(corpus='musique') routes to load_musique (not LogiQA)."""
     import pandas as pd
 
-    from research.demo.phase1_5.data import build_mc_corpus
+    from experiments.phase1_5.data import build_mc_corpus
 
     fake = pd.DataFrame(
         [
@@ -295,7 +295,7 @@ def test_build_mc_corpus_dispatches_to_musique(monkeypatch, tmp_path):
         ]
     )
     monkeypatch.setattr(
-        "research.demo.phase1_5.data_musique.load_musique", lambda cfg: fake
+        "experiments.phase1_5.data_musique.load_musique", lambda cfg: fake
     )
     cfg = MCCorpusConfig(corpus="musique", cache_root=str(tmp_path))
     out = build_mc_corpus(cfg)

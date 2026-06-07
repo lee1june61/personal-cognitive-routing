@@ -36,51 +36,24 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 
+# Loss primitives now live in core.loss_primitives (canonical source =
+# phase1/model_opcycle.py; phase1_5 held verbatim copies). Imported here so the names
+# stay available to this module and its tests unchanged. ``_masked_token_mean`` is the
+# back-compat underscore alias used in the train/eval loops below.
+from core.loss_primitives import (
+    _masked_token_mean,
+    remoe_l1_loss,
+    router_z_loss,
+    update_l1_lambda,
+)
 
-# ----- Loss primitives (copy of phase1/model_opcycle.py with q_mask interface) ------
 
-
-def _masked_token_mean(per_token: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-    """Mean over masked (active) tokens — copy of phase1 ``_masked_token_mean``."""
-    m = mask.to(per_token.dtype)
-    return (per_token * m).sum() / m.sum().clamp(min=1.0)
+# ----- Loss primitives (phase1_5-specific) ------------------------------------------
 
 
 def mc_ce_loss(logits: torch.Tensor, answer_idx: torch.Tensor) -> torch.Tensor:
     """Cross-entropy over MC candidates against the gold index. Phase 1.5 1a primary loss."""
     return F.cross_entropy(logits, answer_idx)
-
-
-def remoe_l1_loss(alpha: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-    """Mean per-token ‖α‖₁ over masked Q tokens. Copy of phase1 ``remoe_l1_loss``."""
-    l1_per_token = alpha.abs().sum(dim=-1)  # (B, T_q)
-    return _masked_token_mean(l1_per_token, mask)
-
-
-def router_z_loss(logits: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-    """ST-MoE router z-loss. Copy of phase1 ``router_z_loss``."""
-    lse = torch.logsumexp(logits, dim=-1)
-    return _masked_token_mean(lse**2, mask)
-
-
-def update_l1_lambda(
-    lam: float,
-    k_active_mean: float,
-    k_target: float,
-    *,
-    factor: float = 1.2,
-    lam_min: float = 1e-6,
-    lam_max: float = 1.0,
-) -> float:
-    """Adaptive λ_l1 controller (Wang et al. 2024). Copy of phase1 ``update_l1_lambda``.
-
-    Multiplicative nudge: too dense → raise λ; too sparse → lower λ. Clamped.
-    """
-    if k_active_mean > k_target:
-        lam = lam * factor
-    elif k_active_mean < k_target:
-        lam = lam / factor
-    return float(min(max(lam, lam_min), lam_max))
 
 
 # ----- Train config + main loop -----------------------------------------------------

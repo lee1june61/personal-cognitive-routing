@@ -7,12 +7,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from research.demo.phase1_5.ablations import (
+from experiments.phase1_5.ablations import (
     PHASE1_5_INITIAL_ROWS,
     AblationRow,
     _row_summary,
 )
-from research.demo.phase1_5.data import MODE_Q_FULL, MODE_Q_ONLY, MODE_Q_PMASK
+from experiments.phase1_5.data import MODE_Q_FULL, MODE_Q_ONLY, MODE_Q_PMASK
 
 
 # ---- AblationRow dataclass -----------------------------------------------------
@@ -101,9 +101,9 @@ def test_run_engine_1a_tiny_smoke(tmp_path: Path):
     # Build a tiny corpus parquet manually so we skip HF download.
     import pandas as pd
 
-    from research.demo.phase1_5.data import MCCorpusConfig, SPLIT_TEST, SPLIT_TRAIN, SPLIT_VAL
-    from research.demo.phase1_5.engine_1a import run_engine_1a
-    from research.demo.phase1_5.train import TrainConfig
+    from experiments.phase1_5.data import MCCorpusConfig, SPLIT_TEST, SPLIT_TRAIN, SPLIT_VAL
+    from experiments.phase1_5.engine_1a import run_engine_1a
+    from experiments.phase1_5.train import TrainConfig
 
     rng = np.random.default_rng(0)
     n_each = 20
@@ -156,7 +156,7 @@ def test_save_probe_artifacts_writes_codes_and_meta(tmp_path):
     import numpy as np
     import pandas as pd
 
-    from research.demo.phase1_5.engine_1a import _save_probe_artifacts
+    from experiments.phase1_5.engine_1a import _save_probe_artifacts
 
     codes = np.random.RandomState(0).standard_normal((5, 8)).astype(np.float32)
     probe = pd.DataFrame(

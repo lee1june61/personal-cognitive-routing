@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from research.demo.phase1_5.eval import (
+from experiments.phase1_5.eval import (
     _adjusted_accuracy,
     chance_rate,
     geometry_baseline,
@@ -242,8 +242,8 @@ def _op_questions():
 def test_build_operation_labels_drops_other_and_rare():
     """Now takes a PRECOMPUTED per-row label array (source-agnostic): drops the
     ``drop_labels`` sentinels (``other``/``unknown``) and classes < min_count."""
-    from research.demo.phase1_5.data import infer_reasoning_type
-    from research.demo.phase1_5.eval import build_operation_labels
+    from experiments.phase1_5.data import infer_reasoning_type
+    from experiments.phase1_5.eval import build_operation_labels
 
     raw = [infer_reasoning_type(q) for q in _op_questions()]
     labels, keep = build_operation_labels(raw, min_count=2)
@@ -256,7 +256,7 @@ def test_build_operation_labels_drops_other_and_rare():
 
 def test_build_operation_labels_from_hop_axis():
     """MuSiQue hop axis: precomputed labels, 'unknown' sentinel + rare dropped."""
-    from research.demo.phase1_5.eval import build_operation_labels
+    from experiments.phase1_5.eval import build_operation_labels
 
     raw = ["2hop"] * 10 + ["3hop"] * 10 + ["4hop"] * 3 + ["unknown"] * 5
     labels, keep = build_operation_labels(raw, min_count=5)
@@ -268,7 +268,7 @@ def test_build_operation_labels_from_hop_axis():
 
 
 def test_regate_operation_selectivity_runs_on_kept_subset():
-    from research.demo.phase1_5.eval import regate_operation_selectivity
+    from experiments.phase1_5.eval import regate_operation_selectivity
 
     rng = np.random.RandomState(0)
     N, two_k = 40, 16
@@ -292,7 +292,7 @@ def test_regate_operation_selectivity_runs_on_kept_subset():
 
 def test_regate_operation_selectivity_with_precomputed_hop_labels():
     """MuSiQue path: caller supplies the hop axis via op_labels (not regex)."""
-    from research.demo.phase1_5.eval import regate_operation_selectivity
+    from experiments.phase1_5.eval import regate_operation_selectivity
 
     rng = np.random.RandomState(0)
     N, two_k = 40, 16
@@ -311,7 +311,7 @@ def test_regate_operation_selectivity_with_precomputed_hop_labels():
 
 
 def test_operation_consistency_detects_operation_clustered_codes():
-    from research.demo.phase1_5.eval import operation_consistency
+    from experiments.phase1_5.eval import operation_consistency
 
     rng = np.random.RandomState(0)
     ops = np.array(["a", "b", "c"] * 30)            # 90 items, op = i % 3
@@ -328,7 +328,7 @@ def test_operation_consistency_detects_operation_clustered_codes():
 def test_operation_consistency_topic_clustered_codes_do_not_fake_operation():
     """If codes cluster by TOPIC (op crosscuts), op_purity must stay ~chance and
     topic must beat op — guards against crediting operation to content structure."""
-    from research.demo.phase1_5.eval import operation_consistency
+    from experiments.phase1_5.eval import operation_consistency
 
     rng = np.random.RandomState(1)
     ops = np.array(["a", "b", "c"] * 30)             # op = i % 3 (crosscuts topic)

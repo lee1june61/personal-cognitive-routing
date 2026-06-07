@@ -6,8 +6,8 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from research.demo.phase1_5.model import Phase15MoE
-from research.demo.phase1_5.run_1b import (
+from experiments.phase1_5.model import Phase15MoE
+from experiments.phase1_5.run_1b import (
     _balance_train_by_hop,
     evaluate_1b,
     hop_depth_selective,

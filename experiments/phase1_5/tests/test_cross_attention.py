@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from research.demo.phase1_5.cross_attention import CrossAttentionModulation
+from experiments.phase1_5.cross_attention import CrossAttentionModulation
 
 
 def test_cross_attention_output_shape():
@@ -64,7 +64,7 @@ def test_cross_attention_default_dims():
 
 
 def test_film_modulation_output_shape():
-    from research.demo.phase1_5.modulation import FiLMModulation
+    from experiments.phase1_5.modulation import FiLMModulation
 
     film = FiLMModulation(d_z=16, d_emb=32)
     kg = torch.randn(2, 5, 16)
@@ -77,7 +77,7 @@ def test_film_modulation_output_shape():
 def test_film_modulation_io_contract_matches_cross_attn():
     """Both modulation blocks must accept ``(kg_hidden, p_emb, p_mask)`` and return
     ``(B, T_q, d_z)`` — drop-in swap is required for ablation Row B."""
-    from research.demo.phase1_5.modulation import FiLMModulation
+    from experiments.phase1_5.modulation import FiLMModulation
 
     xattn = CrossAttentionModulation(d_z=8, d_emb=16, n_heads=2)
     film = FiLMModulation(d_z=8, d_emb=16)
@@ -92,7 +92,7 @@ def test_film_modulation_io_contract_matches_cross_attn():
 
 def test_film_modulation_p_mask_affects_pool():
     """Masked-mean of P excludes padded positions."""
-    from research.demo.phase1_5.modulation import FiLMModulation
+    from experiments.phase1_5.modulation import FiLMModulation
 
     film = FiLMModulation(d_z=8, d_emb=16).eval()
     kg = torch.randn(1, 2, 8)

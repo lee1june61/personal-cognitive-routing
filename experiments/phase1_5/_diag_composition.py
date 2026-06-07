@@ -10,7 +10,7 @@ CPU-only, no e5 encoding. Three cheap cuts:
      near chance here.
   3. dump N sample items for manual composition-depth inspection.
 
-Run: python -m research.demo.phase1_5._diag_composition  (from repo root)
+Run: python -m experiments.phase1_5._diag_composition  (from repo root)
   or python _diag_composition.py  (from phase1_5/ with sys.path hack below)
 """
 
@@ -26,8 +26,8 @@ import numpy as np
 # Allow running as a loose script from inside phase1_5/.
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from research.demo.phase1_5.data import MCCorpusConfig, build_mc_corpus
-    from research.demo.phase1_5.data_musique import _toks
+    from experiments.phase1_5.data import MCCorpusConfig, build_mc_corpus
+    from experiments.phase1_5.data_musique import _toks
 else:
     from .data import MCCorpusConfig, build_mc_corpus
     from .data_musique import _toks  # shared lexical tokeniser (single source)

@@ -10,14 +10,14 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from research.demo.phase1_5.intervention import (
+from experiments.phase1_5.intervention import (
     chain_motif_codes,
     lesion_specificity,
     lesion_step_specificity,
     operation_signature,
     operation_swap,
 )
-from research.demo.phase1_5.model import Phase15MoE
+from experiments.phase1_5.model import Phase15MoE
 
 
 def _probe(b=12, t_q=4, t_p=5, d_emb=32, n_cand=4, k_routed=8, seed=0):

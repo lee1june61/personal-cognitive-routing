@@ -36,97 +36,13 @@ from .model import (
     routing_orthogonality,
 )
 
-
-# ----- Frozen encoder wrapper --------------------------------------------------------
-
-class FrozenEncoder(nn.Module):
-    """Masked-mean pool over a frozen sentence-encoder.
-
-    Default = `BAAI/bge-large-en-v1.5` (1024d, 334M, English). Compatible alternatives:
-    `mixedbread-ai/mxbai-embed-large-v1` (1024d), `sentence-transformers/all-mpnet-base-v2`
-    (768d for legacy). For multilingual SimBench (Stage 2 future), swap to
-    `jinaai/jina-embeddings-v3`.
-    """
-
-    def __init__(self, model_name: str = "BAAI/bge-large-en-v1.5"):
-        super().__init__()
-        from transformers import AutoModel, AutoTokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.encoder = AutoModel.from_pretrained(model_name)
-        for p in self.encoder.parameters():
-            p.requires_grad = False
-        self.encoder.eval()
-        self.d_model = self.encoder.config.hidden_size
-
-    @torch.no_grad()
-    def forward(self, texts: list[str], max_length: int = 256) -> torch.Tensor:
-        device = next(self.encoder.parameters()).device
-        enc = self.tokenizer(
-            texts, padding=True, truncation=True, max_length=max_length, return_tensors="pt",
-        )
-        enc = {k: v.to(device) for k, v in enc.items()}
-        out = self.encoder(**enc).last_hidden_state                              # (B, T, d)
-        mask = enc["attention_mask"].unsqueeze(-1).float()
-        fact_emb = (out * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1)        # (B, d)
-        return fact_emb
-
-    @torch.no_grad()
-    def encode_batched(self, texts: list[str], batch_size: int = 32, max_length: int = 256):
-        """Numpy-yielding batched encoder for cache-building (data.py:encode_or_load)."""
-        import numpy as np
-        from tqdm.auto import tqdm
-        out: list[np.ndarray] = []
-        for i in tqdm(range(0, len(texts), batch_size), desc="encode"):
-            batch = texts[i:i + batch_size]
-            emb = self(batch, max_length=max_length).cpu().numpy()
-            out.append(emb)
-        return np.concatenate(out, axis=0)
-
-    @torch.no_grad()
-    def encode_tokens(
-        self, texts: list[str], max_length: int = 128, pad_to_max: bool = False,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Per-token (NO pooling) encode — operation-cycle pivot (ENGINE_A_DESIGN §1).
-
-        Returns `(last_hidden_state (B, T, d), attention_mask (B, T))`. With
-        `pad_to_max=True` every batch is padded to exactly `T = max_length` so batches
-        stack into a fixed-T cache; otherwise T = longest sequence in the batch.
-        """
-        device = next(self.encoder.parameters()).device
-        enc = self.tokenizer(
-            texts,
-            padding=("max_length" if pad_to_max else True),
-            truncation=True,
-            max_length=max_length,
-            return_tensors="pt",
-        )
-        enc = {k: v.to(device) for k, v in enc.items()}
-        hidden = self.encoder(**enc).last_hidden_state                           # (B, T, d)
-        return hidden, enc["attention_mask"]                                     # no pooling
-
-    @torch.no_grad()
-    def encode_tokens_batched(
-        self, texts: list[str], batch_size: int = 32, t_cap: int = 128,
-    ) -> tuple["np.ndarray", "np.ndarray"]:
-        """Batched per-token encode → fixed-T fp16 cache. Returns
-        `(tokens (N, t_cap, d) fp16, mask (N, t_cap) int8)`. Every batch is padded to
-        `t_cap` (pad_to_max) so the output is a fixed-shape array.
-
-        Writes into a pre-allocated output indexed by offset rather than collecting a list
-        of per-batch arrays + np.concatenate — at N=40k, T=128, d=1024 the fp16 tokens are
-        ~10 GB, and concat would briefly hold the chunks *and* the output (~2x peak),
-        overflowing standard Colab RAM. Pre-allocation keeps peak at ~1x."""
-        import numpy as np
-        from tqdm.auto import tqdm
-        n = len(texts)
-        tokens = np.empty((n, t_cap, self.d_model), dtype=np.float16)
-        mask = np.empty((n, t_cap), dtype=np.int8)
-        for i in tqdm(range(0, n, batch_size), desc="encode_tokens"):
-            batch = texts[i:i + batch_size]
-            emb_b, mask_b = self.encode_tokens(batch, max_length=t_cap, pad_to_max=True)
-            tokens[i:i + len(batch)] = emb_b.cpu().to(torch.float16).numpy()
-            mask[i:i + len(batch)] = mask_b.cpu().to(torch.int8).numpy()
-        return tokens, mask
+# FrozenEncoder is now the shared superset in core (it absorbed phase1's pooled
+# forward / encode_batched / no-prefix encode_tokens AND phase1_5's prefix kwarg +
+# encode_pooled paths). phase1 callers construct it with the BGE model name explicitly,
+# so the core default model name (e5) is never reached here. `prefix` defaults to ""
+# (no prefix) → identical to phase1's original encode_tokens behaviour. Re-exported so
+# `phase1.cycle.FrozenEncoder` (used by baselines, data.py, tests) keeps resolving here.
+from core.encoders import FrozenEncoder
 
 
 # ----- Cycle config ------------------------------------------------------------------

@@ -1,25 +1,20 @@
-"""Frozen sentence encoder with per-token + pooled output and prefix support.
+"""Frozen sentence encoder — superset of the phase1 / phase1_5 copies.
 
-Default = `intfloat/e5-large-v2` (1024d). Paper §5.4 commit on the basis of the
-Phase 1 Stage 1 in-house ceiling (raw e5 operation adjacency ≈ 0.60 at q-first
-T=256). For Row C ablation, swap to `BAAI/bge-large-en-v1.5` (1024d as well —
-matches d_emb without architecture change).
+This unifies two genuinely-divergent originals:
 
-E5 prefix protocol (HF model card, e5 family default):
-- query side  → ``"query: "``
-- passage side → ``"passage: "``
-This is the *documented* retrieval protocol; for sentence-similarity the prefix
-also yields stronger geometry. We apply it explicitly per call rather than
-baking into the encoder so A.3 (full-P-cross-encoded) can compose
-``"query: <Q> [SEP] <P>"`` without double-prefixing P.
+- ``phase1/cycle.py:FrozenEncoder`` — default ``BAAI/bge-large-en-v1.5``; has a pooled
+  ``forward`` (masked-mean) + ``encode_batched`` (numpy concat); ``encode_tokens`` /
+  ``encode_tokens_batched`` with NO prefix.
+- ``phase1_5/encoders.py:FrozenEncoder`` — default ``intfloat/e5-large-v2``; adds an
+  optional E5 ``prefix`` kwarg on every encode path, ``encode_pooled`` /
+  ``encode_pooled_batched`` (OOM-safe preallocated numpy), and ``self.model_name``.
 
-BGE prefix (Row C ablation): BGE-large-en-v1.5 documents a query prefix only
-for retrieval scoring; for the operation-axis probe + cross-attention setup we
-use no prefix (matching Phase 1's `cycle.py` default).
-
-OOM-safe `encode_tokens_batched` pattern lifted verbatim from
-`phase1/cycle.py:FrozenEncoder.encode_tokens_batched` — pre-allocated output
-keeps peak RAM at ~1x the cache size at N=20k, T=256, d=1024 (~10 GB fp16).
+The core version is the union: every method from both, ``prefix`` optional (default
+``""`` → identical to phase1's no-prefix behaviour), default model name kept as
+``intfloat/e5-large-v2`` (no production call site relies on the default — all pass the
+name explicitly). ``self.model_name`` is set, and methods that reference it for a tqdm
+label use ``getattr`` so a test-fabricated encoder (``object.__new__`` without
+``model_name``) still works.
 """
 
 from __future__ import annotations
@@ -33,13 +28,14 @@ DEFAULT_ENCODER_NAME = "intfloat/e5-large-v2"
 
 
 class FrozenEncoder(nn.Module):
-    """Frozen HuggingFace encoder with per-token + pooled output and prefix kwarg.
+    """Frozen HuggingFace encoder with per-token + pooled output and an optional prefix.
 
     Args:
         model_name: HF model id. Defaults to ``intfloat/e5-large-v2``.
 
     Attributes:
         d_model: encoder hidden size (1024 for e5-large-v2 and BGE-large-en-v1.5).
+        model_name: the HF model id.
         tokenizer: HF tokenizer.
         encoder: HF AutoModel (frozen, eval mode).
     """
@@ -55,6 +51,32 @@ class FrozenEncoder(nn.Module):
             p.requires_grad = False
         self.encoder.eval()
         self.d_model: int = self.encoder.config.hidden_size
+
+    # ---- pooled forward (phase1 masked-mean pool) ----------------------------
+
+    @torch.no_grad()
+    def forward(self, texts: list[str], max_length: int = 256) -> torch.Tensor:
+        """Masked-mean pool over the frozen encoder (phase1 default path)."""
+        device = next(self.encoder.parameters()).device
+        enc = self.tokenizer(
+            texts, padding=True, truncation=True, max_length=max_length, return_tensors="pt",
+        )
+        enc = {k: v.to(device) for k, v in enc.items()}
+        out = self.encoder(**enc).last_hidden_state                              # (B, T, d)
+        mask = enc["attention_mask"].unsqueeze(-1).float()
+        fact_emb = (out * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1)        # (B, d)
+        return fact_emb
+
+    @torch.no_grad()
+    def encode_batched(self, texts: list[str], batch_size: int = 32, max_length: int = 256):
+        """Numpy-yielding batched pooled encoder for cache-building (phase1 data.py)."""
+        from tqdm.auto import tqdm
+        out: list[np.ndarray] = []
+        for i in tqdm(range(0, len(texts), batch_size), desc="encode"):
+            batch = texts[i:i + batch_size]
+            emb = self(batch, max_length=max_length).cpu().numpy()
+            out.append(emb)
+        return np.concatenate(out, axis=0)
 
     # ---- core encoding paths -------------------------------------------------
 
@@ -106,19 +128,20 @@ class FrozenEncoder(nn.Module):
         """Batched per-token encode → fixed-T fp16 cache.
 
         Pre-allocates the output (N, t_cap, d) fp16 and (N, t_cap) int8 to keep peak
-        RAM at ~1x the cache (vs ~2x for list-and-concat). Lifted from
-        ``phase1/cycle.py:encode_tokens_batched`` — see that docstring for the
-        OOM rationale at N=40k.
+        RAM at ~1x the cache (vs ~2x for list-and-concat). At N=40k, T=128, d=1024 the
+        fp16 tokens are ~10 GB and concat would briefly hold the chunks *and* the
+        output (~2x peak), overflowing standard Colab RAM.
 
         Returns:
             ``(tokens (N, t_cap, d_model) fp16, mask (N, t_cap) int8)``.
         """
         from tqdm.auto import tqdm
 
+        desc = f"encode_tokens[{getattr(self, 'model_name', '')}]"
         n = len(texts)
         tokens = np.empty((n, t_cap, self.d_model), dtype=np.float16)
         mask = np.empty((n, t_cap), dtype=np.int8)
-        for i in tqdm(range(0, n, batch_size), desc=f"encode_tokens[{self.model_name}]"):
+        for i in tqdm(range(0, n, batch_size), desc=desc):
             batch = texts[i : i + batch_size]
             emb_b, mask_b = self.encode_tokens(
                 batch, prefix=prefix, max_length=t_cap, pad_to_max=True
@@ -184,9 +207,10 @@ class FrozenEncoder(nn.Module):
         """
         from tqdm.auto import tqdm
 
+        desc = f"encode_pooled[{getattr(self, 'model_name', '')}]"
         n = len(texts)
         out = np.empty((n, self.d_model), dtype=np.float32)
-        for i in tqdm(range(0, n, batch_size), desc=f"encode_pooled[{self.model_name}]"):
+        for i in tqdm(range(0, n, batch_size), desc=desc):
             batch = texts[i : i + batch_size]
             emb = self.encode_pooled(
                 batch, prefix=prefix, max_length=max_length, l2_normalize=l2_normalize

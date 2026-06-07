@@ -134,7 +134,7 @@ The 1b row is the important one: the earlier audit's top worry was that testing 
 
 ### Remaining tasks
 
-**Direction 1: parallel co-activation.** A negative on *sequential* composition is **not** a negative on *parallel* composition. The flat mixture already activates ~5 experts *simultaneously*, and that simultaneous co-activation **is itself a distribution over operations**: exactly the `G_u` the project set out to model. The sequential chain was, in hindsight, a detour. The plan is to test parallel co-activation directly via **causal lesioning** (turn off one putative operation; does accuracy drop *only* on problems that need it?) plus motif-consistency, which connects forward to the **S1** falsifier. The intervention/lesion/swap harness is already built and tested in [`phase1_5/`](phase1_5).
+**Direction 1: parallel co-activation.** A negative on *sequential* composition is **not** a negative on *parallel* composition. The flat mixture already activates ~5 experts *simultaneously*, and that simultaneous co-activation **is itself a distribution over operations**: exactly the `G_u` the project set out to model. The sequential chain was, in hindsight, a detour. The plan is to test parallel co-activation directly via **causal lesioning** (turn off one putative operation; does accuracy drop *only* on problems that need it?) plus motif-consistency, which connects forward to the **S1** falsifier. The intervention/lesion/swap harness is already built and tested in [`experiments/phase1_5/`](experiments/phase1_5).
 
 **Honest residual limitations:** the tested chain depth (`L=3`) is shallower than the deepest 4-hop problems; the **frozen** `e5` encoder caps MC accuracy around ~0.55, leaving little headroom, so the model may be *memorizing* artifacts rather than feeling genuine compositional pressure. The frozen-encoder rule (which keeps results attributable) may itself be the deeper bottleneck.
 
@@ -154,15 +154,27 @@ This is framed as **persona / cognitive user-modeling, not preference prediction
 
 ---
 
-## Summary — what each negative bought
+## Summary — the `f(task, person)` map
 
-| Experiment | Falsified | Bought |
-|---|---|---|
-| Phase 1 (reconstruction) | "Reconstruction yields operation specialization" | The objective pivot to answer-prediction + the information bottleneck |
-| 1a (flat, logic-QA) | "Operations emerge on any reasoning corpus" | Located the failure in the **corpus** (single-op substrate) → move to multi-hop |
-| 1b (sequential chain, MuSiQue) | "*Sequential* chaining is the right inductive bias" | Pointed back to **parallel co-activation** = the original `G_u` formulation |
+Every experiment here is one cell in a single verification grid: *which subgraph
+activates* is modeled as `f(task, person)`, and the **task axis (anonymous) is
+validated before the person axis (per-user)**. The full frame, including the fixed
+PASS bar, is in [`docs/verification-framework.md`](docs/verification-framework.md).
 
-All three negatives were **independently reproduced from scratch on 2026-06-04** (`REPRODUCE_ALL.ipynb`). None of these produced a triumphant positive result, and that's an honest description of a real research process. The value is in *which* hypotheses got cleanly ruled out, and why.
+| Axis | Differentiates? | Manner ≠ topic? | Structural / stable? |
+|---|---|---|---|
+| **Task** (anonymous — done / active) | T1 — **weak** (splits by topic, tends to collapse) | T2 — ★ **open blank** (the target; cleanly unmeasured) | T3 — *sequential* **negative**; *parallel* unmeasured |
+| **Person** (per-user — Phase 2, deferred) | P1 — deferred | P2 — deferred (the **S1** falsifier lives here) | P3 — deferred (intended headline: sample-efficiency) |
+
+Substrate (L0) is the precondition for the whole task row, and it **passes**: MuSiQue
+forces genuine multi-hop reasoning (~0.598 flat-model accuracy, ≫ chance). What each
+negative bought, read through that grid:
+
+- **Phase 1 (reconstruction)** falsified "reconstruction yields operation specialization" → bought the pivot to answer-prediction + the information bottleneck.
+- **1a (flat, logic-QA)** falsified "operations emerge on any reasoning corpus" → located the failure in the **corpus** (single-op substrate), moving the work to multi-hop.
+- **1b (sequential chain, MuSiQue)** falsified "*sequential* chaining is the right inductive bias" → pointed back to **parallel co-activation**, which is a *hypothesis shift*, not a claim that parallel is the answer.
+
+All three negatives were **independently reproduced from scratch on 2026-06-04** (`REPRODUCE_ALL.ipynb`). None produced a triumphant positive result, and that is an honest description of a real research process. The value is in *which* hypotheses got cleanly ruled out, and why.
 
 ---
 
@@ -174,7 +186,7 @@ All three negatives were **independently reproduced from scratch on 2026-06-04**
 - **Decoder:** gated low-rank hypernet modulation with a strict **no-bypass** invariant (if the operation activation is zero, the output is zero, so the passage can't leak around the bottleneck)
 - **Objective:** multiple-choice cross-entropy (contrastive over 4 candidates)
 - **Datasets:** Phase 1 uses 7 diverse text sources (Reddit, Pennebaker, PANDORA, PersonaChat, ROCStories, αNLI, SocialIQA); Phase 1.5 uses LogiQA 2.0 + ReClor (single-op control) and **MuSiQue** (multi-hop / compositional)
-- **Engineering hardening:** OOM-safe per-token expert batching, Herfindahl load-balancing, chance-normalized selectivity probes with control baselines, causal lesion/swap intervention harness, all test-driven (≈190 tests in `phase1_5/`)
+- **Engineering hardening:** OOM-safe per-token expert batching, Herfindahl load-balancing, chance-normalized selectivity probes with control baselines, causal lesion/swap intervention harness, all test-driven (≈280 tests across `core/` + `experiments/`)
 
 ---
 
@@ -186,34 +198,47 @@ personal-cognitive-routing/
 ├── REPRODUCE_ALL.ipynb           ★ one-click from-scratch reproduction of every experiment
 ├── docs/
 │   ├── research-journey.md       ★ the full "what I tried / why it failed" story
+│   ├── verification-framework.md ★ the f(task, person) grid every experiment is read through
 │   ├── vision.md                 the paradigm & architecture in depth
 │   ├── glossary.md               domain terms + the project's invariants ("IRON rules")
 │   ├── literature-review.md      annotated positioning against ~38 papers
 │   └── reading-list.md           curated paper list by role
-├── phase1/                       closed experiment — reconstruction cycle (negative result)
-│   ├── README.md
-│   ├── *.py                      model, training, evaluation, baselines
-│   ├── notebooks/                Colab run drivers (04–07)
-│   └── tests/
-└── phase1_5/                     current work — operation router + multi-hop composition
-    ├── README.md
-    ├── *.py                      model, MuSiQue loader, intervention harness, ablations
-    ├── notebooks/                Colab run drivers (01–05)
-    └── tests/
+├── core/                         shared building blocks (single definition, no duplication)
+│   ├── encoders.py               frozen per-token encoder (OOM-safe caching)
+│   ├── routers.py                ReMoE-style router (ReLU gate + adaptive L1)
+│   ├── shared_heads.py · loss_primitives.py · load_balance.py · attn_mask.py
+│   └── eval_core.py              selectivity / geometry-control / chance-rate probes
+└── experiments/
+    ├── phase1/                   closed experiment — reconstruction cycle (negative result)
+    │   ├── README.md · *.py      model, training, evaluation, baselines
+    │   ├── notebooks/            Colab run drivers (04–07)
+    │   └── tests/
+    └── phase1_5/                 current work — operation router + multi-hop composition
+        ├── README.md · *.py      model, MuSiQue loader, intervention harness, ablations
+        ├── notebooks/            Colab run drivers (01–05)
+        └── tests/
 ```
 
-**Where to start reading:** this page → [`docs/research-journey.md`](docs/research-journey.md) → [`docs/vision.md`](docs/vision.md) for the formal framing → `phase1/` and `phase1_5/` for the code.
+Code is split along **shared vs. experiment-specific**: `core/` holds what every
+experiment reuses (one definition each — encoder, router, loss, eval probes);
+`experiments/phase1{,_5}/` keep their own model/training/data, which genuinely differ
+(reconstruction vs. multiple-choice). Imports are prefix-free (`from core.…`,
+`from experiments.…`) so the tree runs identically locally, on Colab, and here.
+
+**Where to start reading:** this page → [`docs/research-journey.md`](docs/research-journey.md) → [`docs/verification-framework.md`](docs/verification-framework.md) for the `f(task, person)` frame → [`docs/vision.md`](docs/vision.md) for the formal paradigm → `experiments/` for the code.
 
 ## Running the code
 
 The experiments were run on Google Colab (GPU) with embedding caches and checkpoints kept off-repo (they are large and regenerable). The code is organized as importable packages with a test suite you can run locally:
 
 ```bash
-pip install torch numpy datasets sentence-transformers pytest
-pytest phase1_5/tests -q        # unit tests (no GPU required)
+pip install torch numpy datasets sentence-transformers scikit-learn pytest
+# run from the repo root so `core` and `experiments` resolve as packages:
+python -m pytest experiments/phase1_5/tests -q   # ~190 unit tests, no GPU
+python -m pytest experiments/phase1/tests -q     # run separately (shared --run-slow flag)
 ```
 
-**Full reproduction.** [`REPRODUCE_ALL.ipynb`](REPRODUCE_ALL.ipynb) re-runs every experiment from scratch and writes every number to a single `out/VERIFICATION.json` (documented value vs. freshly-measured value). Upload this repo to Google Drive, open the notebook in Colab, set the `BASE` variable at the top to the repo's root folder (the directory containing `phase1/` and `phase1_5/`), and Run-All. A GPU is required; sections are independently guarded so a partial run still produces partial results.
+**Full reproduction.** [`REPRODUCE_ALL.ipynb`](REPRODUCE_ALL.ipynb) re-runs every experiment from scratch and writes every number to a single `out/VERIFICATION.json` (documented value vs. freshly-measured value). Upload this repo to Google Drive, open the notebook in Colab, set the `BASE` variable at the top to the repo's root folder (the directory containing `core/` and `experiments/`), and Run-All. A GPU is required; sections are independently guarded so a partial run still produces partial results.
 
 Heavy artifacts (`*.npy`, `*.parquet`, checkpoints, the generated `out/` tree, reference PDFs) are intentionally git-ignored, since they rebuild from the data loaders and training code.
 

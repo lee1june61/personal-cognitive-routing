@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from research.demo.phase1_5.kg_hypernet import KGHypernetModulation
+from experiments.phase1_5.kg_hypernet import KGHypernetModulation
 
 
 def test_kg_hypernet_output_shape():
@@ -56,7 +56,7 @@ def test_kg_hypernet_nonzero_kg_gives_nonzero_output():
 
 def test_kg_hypernet_io_contract_matches_cross_attn():
     """Drop-in swap: same (kg, p, mask) → (B, T_q, d_z) as CrossAttentionModulation."""
-    from research.demo.phase1_5.cross_attention import CrossAttentionModulation
+    from experiments.phase1_5.cross_attention import CrossAttentionModulation
 
     kg = torch.randn(2, 3, 8)
     p = torch.randn(2, 4, 16)

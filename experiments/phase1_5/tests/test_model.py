@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from research.demo.phase1_5.model import (
+from experiments.phase1_5.model import (
     MOD_CROSS_ATTN,
     MOD_FILM,
     MCHead,
@@ -235,14 +235,14 @@ def test_phase15_moe_modulation_film_swap():
     out = model(_tiny_batch())
     assert out["logits"].shape == (2, 4)
     # Modulation module is FiLM.
-    from research.demo.phase1_5.modulation import FiLMModulation
+    from experiments.phase1_5.modulation import FiLMModulation
 
     assert isinstance(model.modulation, FiLMModulation)
 
 
 def test_phase15_moe_modulation_default_is_kg_hypernet():
     model = Phase15MoE(d_emb=32, d_z=16, k_routed=4)
-    from research.demo.phase1_5.kg_hypernet import KGHypernetModulation
+    from experiments.phase1_5.kg_hypernet import KGHypernetModulation
 
     assert isinstance(model.modulation, KGHypernetModulation)
 

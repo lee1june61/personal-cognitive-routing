@@ -26,8 +26,15 @@ import torch.nn.functional as F
 
 from .cross_attention import CrossAttentionModulation
 from .kg_hypernet import KGHypernetModulation
-from .load_balance import LB_OFF, make_lb
 from .modulation import FiLMModulation
+
+# SharedEncoderHead, ReMoERouter (superset originals lived here), and the LB factory now
+# live in core. phase1_5 is the SUPERSET source for the head/router — the core
+# copies are verbatim, so importing them here is behaviour-identical. Re-exported so
+# ``phase1_5.model.{SharedEncoderHead,ReMoERouter}`` (used by tests) keep resolving.
+from core.shared_heads import SharedEncoderHead
+from core.routers import ReMoERouter
+from core.load_balance import LB_OFF, make_lb
 
 
 MOD_KG_HYPERNET = "kg_hypernet"
@@ -37,93 +44,6 @@ MOD_FILM = "film"
 # cross_attn / film retained as §7.4 Gap B ablation baselines — both empirically
 # violate the no-bypass invariant (KG=0 still leaks passage), see ADR 0001.
 MODULATION_TYPES = (MOD_KG_HYPERNET, MOD_CROSS_ATTN, MOD_FILM)
-
-
-# ----- Shared encoder head (copy of phase1/model_opcycle.py) --------------------------
-
-
-class SharedEncoderHead(nn.Module):
-    """Per-token d_emb → d_z. Linear → GELU → Linear. Copy of phase1 ``SharedEncoderHead``."""
-
-    def __init__(self, d_emb: int = 1024, d_z: int = 256, dropout: float = 0.0):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(d_emb, d_z),
-            nn.GELU(),
-            nn.Dropout(dropout) if dropout > 0 else nn.Identity(),
-            nn.Linear(d_z, d_z),
-        )
-
-    def forward(self, h: torch.Tensor) -> torch.Tensor:
-        return self.net(h)
-
-
-# ----- ReMoE router (copy of phase1/model_opcycle.py, K default 128) ------------------
-
-
-class ReMoERouter(nn.Module):
-    """ReMoE routing — ReLU gate, per-expert independent, no simplex normalisation.
-
-    Copy of phase1 ``ReMoERouter`` (Wang et al. 2024). K default 128 for Phase 1.5 1a.
-    Sparsity controlled at train-time by adaptive L1 (``update_l1_lambda``).
-
-    Gate bias is initialised to ``bias_init`` (default +0.5) — with ``bias=0`` +
-    ``weight std=0.01`` the initial logits ~ N(0, 0.01); ReLU then kills ~50% of
-    tokens at epoch 0. Once a gate's logit drifts negative the ReLU derivative
-    is zero → no gradient → no recovery (the K_active=0 trap that the adaptive-L1
-    controller cannot escape). A small positive bias keeps the initial logits in
-    the active half-plane and gives gradients a path to settle the router.
-    """
-
-    def __init__(
-        self,
-        d_z: int = 256,
-        k: int = 128,
-        bias_init: float = 0.5,
-        routing: str = "relu_l1",
-        k_active: int = 4,
-    ):
-        super().__init__()
-        if routing not in ("relu_l1", "topk"):
-            raise ValueError(f"routing must be 'relu_l1' or 'topk'; got {routing!r}")
-        self.k = k
-        self.routing = routing
-        self.k_active = min(int(k_active), k)
-        self.gate = nn.Linear(d_z, k)
-        nn.init.normal_(self.gate.weight, std=0.01)
-        nn.init.constant_(self.gate.bias, bias_init)
-
-    def forward(
-        self,
-        z: torch.Tensor,
-        external_bias: torch.Tensor | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Compute ``alpha`` and ``router_logits`` from latent ``z``.
-
-        ``external_bias`` is the aux-loss-free LB bias buffer (DeepSeek-V3 /
-        Wang 2408.15664).
-
-        - ``routing="relu_l1"`` (default): ``alpha = relu(gate(z) + bias)``;
-          sparsity comes from the train-time adaptive L1. bias is added before
-          ReLU so dead gates recover via positive drift. Returned logits are
-          bias-applied (z-loss / metrics consistent).
-        - ``routing="topk"`` (Phase 3 diversity): select the top-``k_active``
-          experts by ``gate(z) + bias`` (bias steers *selection* only, its
-          designed aux-free use), weight them by softmax of the *original*
-          logits, zero the rest → K_active ≡ k_active by construction (no
-          collapse). Returned logits are the original (un-biased) gate logits.
-        """
-        logits = self.gate(z)  # (B, T, K)
-        biased = logits if external_bias is None else logits + external_bias
-        if self.routing == "topk":
-            # bias steers selection only; weight selected by softmax of original logits.
-            topk_idx = biased.topk(self.k_active, dim=-1).indices  # (B, T, k_active)
-            sel_w = F.softmax(logits.gather(-1, topk_idx), dim=-1)
-            alpha = torch.zeros_like(logits).scatter(-1, topk_idx, sel_w)
-            return alpha, logits
-        # relu_l1 (default): bias added before ReLU; biased logits returned so
-        # z-loss / observability metrics are bias-consistent.
-        return F.relu(biased), biased
 
 
 # ----- Operation expert (= DecoderExpert with output dim = d_z) ----------------------

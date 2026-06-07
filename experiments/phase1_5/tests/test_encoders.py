@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 import torch
 
-from research.demo.phase1_5.encoders import (
+from experiments.phase1_5.encoders import (
     DEFAULT_ENCODER_NAME,
     FrozenEncoder,
     default_p_prefix,

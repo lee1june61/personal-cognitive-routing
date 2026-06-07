@@ -7,12 +7,12 @@ attribution per the forced-design IRON (paper §8).
 
 CLI usage::
 
-    python -m research.demo.phase1_5.ablations \\
+    python -m experiments.phase1_5.ablations \\
         --row A.1 --seed 0 --device cuda --out_dir out/phase1_5/ablations
 
 Or programmatically::
 
-    from research.demo.phase1_5.ablations import PHASE1_5_INITIAL_ROWS, run_all_rows
+    from experiments.phase1_5.ablations import PHASE1_5_INITIAL_ROWS, run_all_rows
     df = run_all_rows(PHASE1_5_INITIAL_ROWS, epochs=40, device='cuda')
 """
 

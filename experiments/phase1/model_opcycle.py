@@ -21,48 +21,34 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-# ----- Shared encoder head (per-token 1024 → d_z) ------------------------------------
-
-class SharedEncoderHead(nn.Module):
-    """Trainable shared encoder: h_t (d_model) → z_t (d_z). Linear → GELU → Linear."""
-
-    def __init__(self, d_model: int = 1024, d_z: int = 256):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(d_model, d_z),
-            nn.GELU(),
-            nn.Linear(d_z, d_z),
-        )
-
-    def forward(self, h: torch.Tensor) -> torch.Tensor:
-        return self.net(h)
+# SharedEncoderHead, ReMoERouter, and the loss primitives now live in core
+# (extracted from this module — it is the canonical source). Imported here so the
+# names remain available to phase1 callers / tests unchanged.
+from core.shared_heads import SharedEncoderHead
+from core.routers import ReMoERouter as _CoreReMoERouter
+from core.loss_primitives import (
+    _masked_token_mean,
+    masked_token_mean,
+    remoe_l1_loss,
+    router_z_loss,
+    update_l1_lambda,
+)
 
 
-# ----- ReMoE router (ReLU gate, independent, adaptive-K) -----------------------------
+class ReMoERouter(_CoreReMoERouter):
+    """phase1 ReMoERouter — the core superset with phase1's original defaults.
 
-class ReMoERouter(nn.Module):
-    """ReMoE routing (Wang et al. 2024): replace TopK/softmax with a per-expert ReLU
-    gate. Each expert i gets an independent gate g_i = ReLU(W z + b)_i — non-negative,
-    exactly zero when the logit is ≤ 0, and *not* normalised to a simplex. Sparsity
-    (K_active) is emergent and controlled at train-time by an adaptive L1 penalty on the
-    gates (see `remoe_l1_loss`), so it self-adjusts rather than being fixed by TopK.
-
-    Returns (alpha, logits): alpha = ReLU(logits) are the mixing gates; logits are kept
-    raw so the ST-MoE router z-loss and the load-balance loss can read them.
+    phase1's pre-extraction router was the SUBSET: ``(d_z=256, k=16)``, gate bias
+    initialised to **zeros**, ``forward(z)`` returning ``(relu(logits), logits)``.
+    The core superset defaults to ``bias_init=0.5`` (phase1_5). This subclass pins
+    ``bias_init=0.0`` so phase1's behaviour (and ``test_opcycle_model.py``, which
+    bare-constructs ``ReMoERouter(d_z, k)`` and asserts exact-zero gates at init) is
+    unchanged. With ``external_bias=None`` + ``routing='relu_l1'`` + ``bias_init=0.0``
+    the inherited forward is identical to the old phase1 forward.
     """
 
-    def __init__(self, d_z: int = 256, k: int = 16):
-        super().__init__()
-        self.k = k
-        self.gate = nn.Linear(d_z, k)
-        nn.init.normal_(self.gate.weight, std=0.01)
-        nn.init.zeros_(self.gate.bias)
-
-    def forward(self, z: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        logits = self.gate(z)            # (B, T, K)
-        alpha = F.relu(logits)           # (B, T, K) — exact zeros, non-negative
-        return alpha, logits
+    def __init__(self, d_z: int = 256, k: int = 16, bias_init: float = 0.0, **kwargs):
+        super().__init__(d_z=d_z, k=k, bias_init=bias_init, **kwargs)
 
 
 # ----- Decoder expert (generative operator) ------------------------------------------
@@ -120,6 +106,8 @@ class OpCycleMoE(nn.Module):
         # content; the deviation term makes a token's routing context-dependent. Experts
         # still decode plain z (deviation is router-input only), so d_z is unchanged.
         d_route = 2 * d_z if route_on_deviation else d_z
+        # phase1 ReMoERouter subclass pins bias_init=0.0 (zeros bias) — reproduces the
+        # pre-extraction behaviour; the core superset's default is +0.5 (phase1_5).
         self.router = ReMoERouter(d_route, k)
         self.experts = nn.ModuleList(
             DecoderExpert(d_z, d_hidden, d_model) for _ in range(k)
@@ -156,11 +144,8 @@ class OpCycleMoE(nn.Module):
 
 
 # ----- Per-token masked losses (ENGINE_A_DESIGN §3) ----------------------------------
-
-def _masked_token_mean(per_token: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-    """Mean of a per-token scalar (B, T) over masked (active) tokens only."""
-    m = mask.to(per_token.dtype)
-    return (per_token * m).sum() / m.sum().clamp(min=1.0)
+# _masked_token_mean / remoe_l1_loss / router_z_loss / update_l1_lambda are imported
+# from core.loss_primitives at the top of this module (canonical home).
 
 
 def masked_recon_loss(
@@ -176,23 +161,6 @@ def masked_recon_loss(
     else:
         per_token = ((h - recon) ** 2).mean(dim=-1)                 # (B, T)
     return _masked_token_mean(per_token, mask)
-
-
-def remoe_l1_loss(alpha: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-    """ReMoE adaptive-L1 penalty: mean ‖α_t‖₁ over masked tokens. Driving this down
-    shrinks K_active; the coefficient λ_l1 is tuned (optionally adaptively) at train-time
-    to hit a target sparsity. Returns the raw penalty term (coefficient applied by caller).
-    """
-    l1_per_token = alpha.abs().sum(dim=-1)                          # (B, T)
-    return _masked_token_mean(l1_per_token, mask)
-
-
-def router_z_loss(logits: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-    """ST-MoE (Zoph 2022) router z-loss: mean logsumexp(logits)² over masked tokens.
-    Penalises large router logits, keeping the gate numerically stable.
-    """
-    lse = torch.logsumexp(logits, dim=-1)                          # (B, T)
-    return _masked_token_mean(lse ** 2, mask)
 
 
 def load_balance_loss(alpha: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
@@ -222,30 +190,6 @@ def load_balance_loss(alpha: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     usage = alpha / alpha.sum(dim=-1, keepdim=True).clamp(min=1e-9)  # per-token share, 0 if dead
     P = (usage * m).sum(dim=(0, 1)) / n_tok                        # (K,) mean usage share
     return K * (P ** 2).sum()
-
-
-def update_l1_lambda(
-    lam: float,
-    k_active_mean: float,
-    k_target: float,
-    *,
-    factor: float = 1.2,
-    lam_min: float = 1e-6,
-    lam_max: float = 1.0,
-) -> float:
-    """ReMoE-style adaptive L1 coefficient controller (Wang et al. 2024).
-
-    The L1 penalty `remoe_l1_loss` only shrinks the gates; what regulates the *level* of
-    sparsity is the coefficient λ_l1. A fixed λ is brittle — slightly too large drives
-    K_active→0 (recon collapse), slightly too small leaves the router dense. This nudges λ
-    multiplicatively toward a target mean K_active each step: too dense → raise λ (more
-    pressure), too sparse → lower λ. Clamped to [lam_min, lam_max].
-    """
-    if k_active_mean > k_target:
-        lam = lam * factor
-    elif k_active_mean < k_target:
-        lam = lam / factor
-    return float(min(max(lam, lam_min), lam_max))
 
 
 def opcycle_loss(

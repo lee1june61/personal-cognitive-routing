@@ -6,9 +6,9 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from research.demo.phase1_5.data import MCDataset
-from research.demo.phase1_5.model import Phase15MoE
-from research.demo.phase1_5.train import (
+from experiments.phase1_5.data import MCDataset
+from experiments.phase1_5.model import Phase15MoE
+from experiments.phase1_5.train import (
     TrainConfig,
     _masked_token_mean,
     mc_ce_loss,

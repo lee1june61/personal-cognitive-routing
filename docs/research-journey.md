@@ -99,7 +99,7 @@ This reframed the next step away from the *model* and toward the *data*: I neede
 - Measure **operation consistency** via shared activation motifs across problems with the same reasoning structure, controlling for topic.
 - This connects forward to the project's **S1 falsification** (mechanistic universality: the same operation should produce the same activation signature across users).
 
-The intervention/lesion/swap harness for this is already built and tested in [`../phase1_5/`](../phase1_5).
+The intervention/lesion/swap harness for this is already built and tested in [`../experiments/phase1_5/`](../experiments/phase1_5).
 
 **The alternative branch** if Direction 1 doesn't hold: move to **Phase 2**, introducing a genuine **per-user** activation distribution `G_u` (so far all "users" share one `G`), per the vision document. Phase 2 is framed as **persona / cognitive user-modeling, not preference prediction**: its intended payoff is sample-efficiency / cold-start (mechanism learned once; per-user cost is only `G_u`) and an interpretable, comparable user representation, evaluated by user-simulation / persona-faithfulness — *not* by beating preference-accuracy baselines on their own turf.
 

@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from research.demo.phase1_5.data import (
+from experiments.phase1_5.data import (
     ENCODING_MODES,
     MCCorpusConfig,
     MCDataset,
@@ -142,7 +142,7 @@ def test_build_q_text_q_pmask_uses_supplied_placeholder():
 def test_infer_reasoning_type_strengthen_beats_inference_on_supports_argument():
     """LSAT canonical: 'supports the argument' = strengthen, not inference.
     Priority fix verified — the inference bucket no longer shadows strengthen."""
-    from research.demo.phase1_5.data import infer_reasoning_type
+    from experiments.phase1_5.data import infer_reasoning_type
 
     stem = "Which one of the following, if true, most strongly supports the speaker's argument?"
     assert infer_reasoning_type(stem) == "strengthen"
@@ -150,21 +150,21 @@ def test_infer_reasoning_type_strengthen_beats_inference_on_supports_argument():
 
 def test_infer_reasoning_type_supported_by_passage_is_inference():
     """LSAT canonical: 'supported by the passage' (passive) = inference."""
-    from research.demo.phase1_5.data import infer_reasoning_type
+    from experiments.phase1_5.data import infer_reasoning_type
 
     stem = "Which of the following is most strongly supported by the passage?"
     assert infer_reasoning_type(stem) == "inference"
 
 
 def test_infer_reasoning_type_can_be_inferred_is_inference():
-    from research.demo.phase1_5.data import infer_reasoning_type
+    from experiments.phase1_5.data import infer_reasoning_type
 
     stem = "Which one of the following can be properly inferred from the statements above?"
     assert infer_reasoning_type(stem) == "inference"
 
 
 def test_infer_reasoning_type_weakens_is_weaken():
-    from research.demo.phase1_5.data import infer_reasoning_type
+    from experiments.phase1_5.data import infer_reasoning_type
 
     stem = "Which of the following, if true, most weakens the conclusion?"
     assert infer_reasoning_type(stem) == "weaken"
@@ -172,7 +172,7 @@ def test_infer_reasoning_type_weakens_is_weaken():
 
 def test_infer_reasoning_type_assumption_word_boundary():
     """'depend on' = assumption, but 'independent' must NOT trigger."""
-    from research.demo.phase1_5.data import infer_reasoning_type
+    from experiments.phase1_5.data import infer_reasoning_type
 
     assert infer_reasoning_type("The argument depends on which assumption?") == "assumption"
     assert infer_reasoning_type("The independent variable was X.") == "other"
@@ -180,14 +180,14 @@ def test_infer_reasoning_type_assumption_word_boundary():
 
 def test_infer_reasoning_type_flaw_word_boundary():
     """'flaw' = flaw, but 'flawless' must NOT trigger (substring footgun fix)."""
-    from research.demo.phase1_5.data import infer_reasoning_type
+    from experiments.phase1_5.data import infer_reasoning_type
 
     assert infer_reasoning_type("The flaw in this reasoning is that") == "flaw"
     assert infer_reasoning_type("the author's flawless argument") == "other"
 
 
 def test_infer_reasoning_type_empty_returns_other():
-    from research.demo.phase1_5.data import infer_reasoning_type
+    from experiments.phase1_5.data import infer_reasoning_type
 
     assert infer_reasoning_type("") == "other"
     assert infer_reasoning_type("   ") == "other"
@@ -197,7 +197,7 @@ def test_infer_reasoning_type_empty_returns_other():
 def test_infer_reasoning_type_unmatched_returns_other_not_wh_word():
     """Unmatched stems must NOT fall through to a wh-word bucket — that would
     reintroduce Phase 1's F3 format-artifact confound at the label layer."""
-    from research.demo.phase1_5.data import infer_reasoning_type
+    from experiments.phase1_5.data import infer_reasoning_type
 
     # Plain wh-word question with no LSAT-style stem.
     assert infer_reasoning_type("Which color is the sky?") == "other"
@@ -210,7 +210,7 @@ def test_infer_reasoning_type_unmatched_returns_other_not_wh_word():
 def test_logiqa2_type_to_label_sufficient_priority_when_multiple_true():
     """Priority order: Sufficient > Necessary > Disjunctive > Conjunctive > Categorical.
     Multiple True keys → first in priority list wins."""
-    from research.demo.phase1_5.data import _logiqa2_type_to_label
+    from experiments.phase1_5.data import _logiqa2_type_to_label
 
     type_dict = {
         "Sufficient Conditional Reasoning": True,
@@ -223,7 +223,7 @@ def test_logiqa2_type_to_label_sufficient_priority_when_multiple_true():
 
 
 def test_logiqa2_type_to_label_each_canonical_value():
-    from research.demo.phase1_5.data import _logiqa2_type_to_label
+    from experiments.phase1_5.data import _logiqa2_type_to_label
 
     cases = [
         ("Sufficient Conditional Reasoning", "sufficient_conditional"),
@@ -239,7 +239,7 @@ def test_logiqa2_type_to_label_each_canonical_value():
 
 def test_logiqa2_type_to_label_all_false_returns_none():
     """All False → None → caller falls back to infer_reasoning_type."""
-    from research.demo.phase1_5.data import _logiqa2_type_to_label
+    from experiments.phase1_5.data import _logiqa2_type_to_label
 
     type_dict = {
         "Sufficient Conditional Reasoning": False,
@@ -252,7 +252,7 @@ def test_logiqa2_type_to_label_all_false_returns_none():
 
 
 def test_logiqa2_type_to_label_non_dict_returns_none():
-    from research.demo.phase1_5.data import _logiqa2_type_to_label
+    from experiments.phase1_5.data import _logiqa2_type_to_label
 
     assert _logiqa2_type_to_label(None) is None
     assert _logiqa2_type_to_label("Sufficient") is None
@@ -262,7 +262,7 @@ def test_logiqa2_type_to_label_non_dict_returns_none():
 
 def test_logiqa2_type_to_label_priority_keys_not_in_dict_returns_none():
     """Foreign keys (not in priority list) → None even if True."""
-    from research.demo.phase1_5.data import _logiqa2_type_to_label
+    from experiments.phase1_5.data import _logiqa2_type_to_label
 
     type_dict = {"Modus Ponens": True, "Modus Tollens": True}
     assert _logiqa2_type_to_label(type_dict) is None
@@ -272,7 +272,7 @@ def test_logiqa2_type_to_label_priority_keys_not_in_dict_returns_none():
 
 
 def test_logiqa2_github_row_to_record_full_round_trip():
-    from research.demo.phase1_5.data import (
+    from experiments.phase1_5.data import (
         SOURCE_LOGIQA2,
         SPLIT_TRAIN,
         _logiqa2_github_row_to_record,
@@ -304,7 +304,7 @@ def test_logiqa2_github_row_to_record_full_round_trip():
 
 def test_logiqa2_github_row_to_record_all_false_type_falls_back_to_heuristic():
     """type dict all False → heuristic infer_reasoning_type fires on question text."""
-    from research.demo.phase1_5.data import (
+    from experiments.phase1_5.data import (
         SPLIT_TRAIN,
         _logiqa2_github_row_to_record,
     )
@@ -328,7 +328,7 @@ def test_logiqa2_github_row_to_record_all_false_type_falls_back_to_heuristic():
 
 
 def test_logiqa2_github_row_to_record_invalid_returns_none():
-    from research.demo.phase1_5.data import SPLIT_TRAIN, _logiqa2_github_row_to_record
+    from experiments.phase1_5.data import SPLIT_TRAIN, _logiqa2_github_row_to_record
 
     # Wrong option count
     bad_opts = {
@@ -364,7 +364,7 @@ def test_load_logiqa2_from_github_one_split_shape(tmp_path: Path):
 
     Requires network. Slow-marked so default ``pytest`` skip skips it.
     """
-    from research.demo.phase1_5.data import MCCorpusConfig, _load_logiqa2_from_github
+    from experiments.phase1_5.data import MCCorpusConfig, _load_logiqa2_from_github
 
     cfg = MCCorpusConfig(cache_root=str(tmp_path))
     df = _load_logiqa2_from_github(cfg)
@@ -381,7 +381,7 @@ def test_infer_reasoning_type_private_alias_still_works():
     """Back-compat: ``_infer_reasoning_type`` (underscored) is an alias to
     the public ``infer_reasoning_type`` — cell-9 of the notebook imports the
     underscored name historically."""
-    from research.demo.phase1_5.data import _infer_reasoning_type, infer_reasoning_type
+    from experiments.phase1_5.data import _infer_reasoning_type, infer_reasoning_type
 
     assert _infer_reasoning_type is infer_reasoning_type
 
@@ -470,7 +470,7 @@ def test_load_logiqa2_returns_mc_schema(tmp_path: Path):
         max_test_samples=50,
         cache_root=str(tmp_path),
     )
-    from research.demo.phase1_5.data import load_logiqa2
+    from experiments.phase1_5.data import load_logiqa2
 
     df = load_logiqa2(cfg)
     assert "passage" in df.columns
@@ -487,7 +487,7 @@ def test_load_logiqa2_returns_mc_schema(tmp_path: Path):
 @pytest.mark.slow
 def test_load_reclor_returns_mc_schema(tmp_path: Path):
     cfg = MCCorpusConfig(cache_root=str(tmp_path))
-    from research.demo.phase1_5.data import load_reclor
+    from experiments.phase1_5.data import load_reclor
 
     df = load_reclor(cfg)
     if len(df):
@@ -523,7 +523,7 @@ def test_encode_or_load_mc_q_only_shapes(tmp_path: Path):
         t_cap_p=128,
         cache_root=str(tmp_path),
     )
-    from research.demo.phase1_5.data import encode_or_load_mc
+    from experiments.phase1_5.data import encode_or_load_mc
 
     corpus = build_mc_corpus(cfg)
     out = encode_or_load_mc(corpus, cfg, encoding_mode=MODE_Q_ONLY, batch_size=8)
@@ -546,7 +546,7 @@ def test_encode_or_load_mc_pmask_differs_from_qonly(tmp_path: Path):
         t_cap_p=64,
         cache_root=str(tmp_path),
     )
-    from research.demo.phase1_5.data import encode_or_load_mc
+    from experiments.phase1_5.data import encode_or_load_mc
 
     corpus = build_mc_corpus(cfg)
     out_qonly = encode_or_load_mc(corpus, cfg, encoding_mode=MODE_Q_ONLY, batch_size=8)
@@ -571,7 +571,7 @@ def test_encode_or_load_mc_full_uses_more_q_tokens_than_qonly(tmp_path: Path):
         t_cap_p=128,
         cache_root=str(tmp_path),
     )
-    from research.demo.phase1_5.data import encode_or_load_mc
+    from experiments.phase1_5.data import encode_or_load_mc
 
     corpus = build_mc_corpus(cfg)
     out_qonly = encode_or_load_mc(corpus, cfg, encoding_mode=MODE_Q_ONLY, batch_size=8)
@@ -581,7 +581,7 @@ def test_encode_or_load_mc_full_uses_more_q_tokens_than_qonly(tmp_path: Path):
 
 def test_encode_or_load_mc_invalid_mode_raises():
     cfg = MCCorpusConfig()
-    from research.demo.phase1_5.data import encode_or_load_mc
+    from experiments.phase1_5.data import encode_or_load_mc
 
     df = pd.DataFrame(
         {

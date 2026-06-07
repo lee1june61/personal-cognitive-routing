@@ -9,13 +9,13 @@ from __future__ import annotations
 import pytest
 import torch
 
-from research.demo.phase1_5.load_balance import (
+from experiments.phase1_5.load_balance import (
     LB_AUX_FREE,
     LB_OFF,
     AuxLossFreeLB,
     make_lb,
 )
-from research.demo.phase1_5.model import Phase15MoE, ReMoERouter
+from experiments.phase1_5.model import Phase15MoE, ReMoERouter
 
 
 # ---- AuxLossFreeLB.step --------------------------------------------------------
