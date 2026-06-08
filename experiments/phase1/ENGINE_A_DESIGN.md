@@ -1,3 +1,5 @@
+<!-- Internal Phase-1 design note (mostly Korean), kept for transparency. SUPERSEDED by the Phase 1.5 pivot; see ../../docs/research-journey.md for the public narrative. -->
+
 # Engine-A Design (Phase 1 recon-cycle, 2026-05-27) · ⚠️ SUPERSEDED 2026-05-28
 
 > **DEPRECATED**: Phase 1 Engine-A spec (SMoE-VAE식 decode-side experts · K=16 · ReMoE · per-token · sequence-level readout · recon-primary). Stage1 결과 F3 collapse 구조적 (operation adj +0.18 < topic 0.58~0.97). 5-28 paradigm pivot → Phase 1.5.

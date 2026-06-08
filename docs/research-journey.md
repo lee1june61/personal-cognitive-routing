@@ -69,6 +69,8 @@ Target architecture: `K = 128` fine-grained experts, `K_active ≈ 4`, single re
 
 **Result. ❌ Negative, but it localized the problem.** Operation selectivity sat barely above chance (~0.05). The diagnostic that mattered: on this corpus, the **question stem alone** predicts the answer-type at a 0.98 ceiling, while lexical matching is at chance (~0.27). In other words, **every problem announces its own single operation**. There is *no composition to discover*. The corpus is a **single-operation substrate**. You cannot observe operations *composing* if each problem only ever uses one.
 
+> *Caveat on the committed notebook.* `experiments/phase1_5/notebooks/01_engine_1a.ipynb` shows mixed outputs, including an early apparent **PASS (adj_op 0.264)**. That run predates the bypass fix and the operation-label confound diagnosis (the operation "labels" were a near-degenerate stem regex), and is **superseded by the weak-ceiling reading** above. Reported 1a figures used `K_routed=64`; `K=128` is the target spec, not what every committed run used.
+
 This reframed the next step away from the *model* and toward the *data*: I needed a corpus where a problem genuinely requires **chaining multiple operations**.
 
 ### Stage 1b — sequential chain over a compositional corpus (CLOSED, negative)
