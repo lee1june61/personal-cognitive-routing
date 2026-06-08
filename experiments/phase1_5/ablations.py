@@ -100,6 +100,8 @@ class AblationRow:
     corpus: str | None = None
     # 1b chain-of-experts depth (1 = flat 1a; 2-4 = chain). Threaded into
     # Phase15MoE(chain_steps=...); engine routes train/eval via forward_chain.
+    # ⚠ DEPRECATED chain (2026-06-08): seq layout = setup-failure → direction-1
+    # parallel. chain_steps > 1 is legacy (1b orchestrator archived).
     chain_steps: int = 1
     # Dropout in the encoder head + experts (overfit control; MuSiQue memorises
     # at 0.0). Threaded into Phase15MoE(dropout=...).

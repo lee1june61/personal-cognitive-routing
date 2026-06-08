@@ -149,6 +149,8 @@ def _forward_normalized(model: nn.Module, batch: dict):
     the train/eval loops treat both regimes uniformly (per-step L1/z-loss are
     *averaged* so the adaptive-L1 K-target scale is comparable across regimes)."""
     if getattr(model, "chain_steps", 1) > 1:
+        # ⚠ 1b chain path DEPRECATED (2026-06-08): seq layout = setup-failure →
+        # direction-1 parallel. Kept for reproduction; flat 1a (chain_steps=1) is live.
         out = model.forward_chain(batch)
         return out["logits"], out["alpha_steps"], out["router_logits_steps"], out["k_active_steps"]
     out = model(batch)

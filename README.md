@@ -1,5 +1,7 @@
 # Cognitive Routing over a Universal Knowledge Graph
 
+> ⚠️ **Live repo — under active refactor (June 2026).** This is an ongoing research project, not a finished artifact. The code is being reorganized (experiments are being archived/restructured as the framing sharpens), so some notebooks or imports may not run cleanly mid-refactor. The research narrative below is kept current; the code layout is still settling.
+
 > Can we model *who a user is* not as a single vector, but as a **distribution over shared interpretive operations**: the reusable ways of reasoning that everyone draws from, but that each person activates differently depending on context?
 
 This repository is a research log of that question. It is an **honest research project**: most of what is recorded here is a sequence of carefully designed experiments that **did not work the way I hoped**, what each negative result ruled out, and how it reshaped the next attempt. The negative results are the point. They are where the actual learning happened.
@@ -55,6 +57,8 @@ To be upfront: the building blocks here are not new, and this project claims no 
 What is left is a specific combination none of them occupy: interpretive operations (how a person reasons, not their preferences or traits), discovered *without operation labels*, treated as a generated *output*, and conditioned per user, with a falsifiable test that the shared operations behave consistently across users (S1). The question is therefore not "what is this user like?" but *which operations does a person apply, and when?*
 
 Two things keep this short of a novelty claim, and neither is "someone already did it." First, a new combination of known parts is the weakest kind of novelty; its worth depends on the combination doing something the neighbors cannot. Second, that has not been shown yet: the central mechanism, operations emerging without operation labels, has not held up in the experiments below. So this repository is best read as a falsifiable *question* under investigation rather than a finished contribution. (Reconstruction was the first attempt and was falsified in Phase 1; answer-prediction replaced it; whether interpretive operations emerge at all is still open.)
+
+Two adjacent results frame the bet precisely — and honestly, including the part that cuts against it. Herbst et al. (2026, *The Expert Strikes Back*) show experts *can* carry fine-grained operations — but **observed post-hoc in large pretrained MoEs**, and they do *not* claim the structure *emerges* from a training objective. And *Iterated Learning for Emergent Systematicity* (2021) found that purely unsupervised compositional emergence was "thus far infeasible" without some supervision. Together they make this **worth trying, not proven**: the *existence* of operation-structured experts is real, but the project's specific bet — that it **emerges from answer-prediction alone, with no operation labels** — is exactly the open, headwind-facing part. No cited paper protects that bet; that is what the experiments are for.
 
 > **S1 (mechanistic universality).** If the same operation is active for two different users, the formal signature of what it generates should be similar across them. If not, the "shared mechanism" is really `K` user-specific subnetworks, and the decomposition is wrong. (A Phase 2 test; the per-user axis isn't built yet.)
 
@@ -209,13 +213,12 @@ personal-cognitive-routing/
 │   ├── shared_heads.py · loss_primitives.py · load_balance.py · attn_mask.py
 │   └── eval_core.py              selectivity / geometry-control / chance-rate probes
 └── experiments/
-    ├── phase1/                   closed experiment — reconstruction cycle (negative result)
-    │   ├── README.md · *.py      model, training, evaluation, baselines
-    │   ├── notebooks/            Colab run drivers (04–07)
-    │   └── tests/
-    └── phase1_5/                 current work — operation router + multi-hop composition
+    ├── _archive/                 archived experiments (kept for provenance, not active)
+    │   ├── 2026-06-08_recon_cycle/    Phase 1 reconstruction cycle (closed negative)
+    │   └── 2026-06-08_seq_chain_1b/   1b sequential orchestrator (setup-failure, layout only)
+    └── phase1_5/                 current work — flat operation router + multi-hop substrate (live)
         ├── README.md · *.py      model, MuSiQue loader, intervention harness, ablations
-        ├── notebooks/            Colab run drivers (01–05)
+        ├── notebooks/            Colab run drivers (01–04; 1b notebook archived)
         └── tests/
 ```
 
@@ -234,8 +237,7 @@ The experiments were run on Google Colab (GPU) with embedding caches and checkpo
 ```bash
 pip install torch numpy datasets sentence-transformers scikit-learn pytest
 # run from the repo root so `core` and `experiments` resolve as packages:
-python -m pytest experiments/phase1_5/tests -q   # ~190 unit tests, no GPU
-python -m pytest experiments/phase1/tests -q     # run separately (shared --run-slow flag)
+python -m pytest experiments/phase1_5 -q   # ~200 unit tests, no GPU (pytest.ini ignores _archive)
 ```
 
 **Full reproduction.** [`REPRODUCE_ALL.ipynb`](REPRODUCE_ALL.ipynb) re-runs every experiment from scratch and writes every number to a single `out/VERIFICATION.json` (documented value vs. freshly-measured value). Upload this repo to Google Drive, open the notebook in Colab, set the `BASE` variable at the top to the repo's root folder (the directory containing `core/` and `experiments/`), and Run-All. A GPU is required; sections are independently guarded so a partial run still produces partial results.

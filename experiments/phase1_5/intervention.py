@@ -98,6 +98,9 @@ def lesion_specificity(model, batch, op_labels, top_experts, *, device="cpu") ->
 
 
 # ----- 1b chain-of-experts causal battery + S1 motif ---------------------------------
+# ⚠ DEPRECATED (2026-06-08): the 1b sequential-chain battery below = setup-failure
+# (layout only; superseded by direction-1 parallel). Kept for reproduction; the 1b
+# orchestrator is archived at _archive/2026-06-08_seq_chain_1b/.
 
 
 @torch.no_grad()

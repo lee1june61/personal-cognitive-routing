@@ -73,7 +73,7 @@ Target architecture: `K = 128` fine-grained experts, `K_active ≈ 4`, single re
 
 This reframed the next step away from the *model* and toward the *data*: I needed a corpus where a problem genuinely requires **chaining multiple operations**.
 
-### Stage 1b — sequential chain over a compositional corpus (CLOSED, negative)
+### Stage 1b — sequential chain over a compositional corpus (sequential *layout* = setup-failure)
 
 **Corpus pivot to MuSiQue.** MuSiQue is a multi-hop QA dataset where each question requires **2–4 reasoning hops**, and, crucially, the **intermediate answers are hard distractors** (correct at their own hop, wrong as the final answer). I converted it to a 4-choice MC format and kept the logic-QA set as a **single-op control arm** to isolate the effect of compositional substrate. (Decomposition / hop-depth labels are available for analysis but never fed to the model.)
 
@@ -82,7 +82,7 @@ This reframed the next step away from the *model* and toward the *data*: I neede
 **Result (confound-controlled run). ❌ Negative on sequential composition.**
 - The **substrate is healthy**: the flat model reaches **~0.598 validation accuracy** on MuSiQue (well above chance), so the corpus and pipeline are sound.
 - The control arm behaves correctly (hop structure empty where it should be).
-- But the **sequential chain discovers no adaptive depth**: across problems the effective breadth stays flat (≈`{2,2,2}`), and the chain performs **no better than the flat mixture**. Depth-adaptive sequential composition **did not emerge**.
+- But the **sequential chain discovers no adaptive depth**: across problems the effective breadth stays flat (≈`{2,2,2}`), and the chain performs **no better than the flat mixture**. Depth-adaptive sequential composition **did not emerge in this setup** — `clean` on the chain-length confound (rebutted via L=4 × 3 seeds), but the frozen-`e5` ceiling stays **open**. So this is a setup-failure of the *sequential layout*, not a falsification of the operation-emergence hypothesis (nor of *parallel* composition).
 
 **What this rules out, and what it points to.** Sequential chaining (the "chain-of-thought" inductive bias) is **not** what emerges here. But, and this is the pivot, a **negative on *sequential* composition is not a negative on *parallel* composition.** The flat mixture already activates ~5 experts *simultaneously*. That simultaneous co-activation **is itself a distribution over operations**, which is *exactly* the `G_u` (per-user activation distribution) the project set out to model. The sequential chain was, in hindsight, a **detour**.
 

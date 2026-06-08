@@ -258,6 +258,13 @@ class Phase15MoE(nn.Module):
     def forward_chain(self, batch: dict, alpha_override_steps: list | None = None) -> dict:
         """1b chain-of-experts forward (L = ``self.chain_steps``).
 
+        ⚠ DEPRECATED (2026-06-08): the sequential-chain LAYOUT is a setup-failure
+        (breadth {2,2,2} non-monotone; frozen-e5 ceiling still OPEN), superseded by
+        direction-1 PARALLEL co-activation. This does NOT discard the operation-
+        emergence hypothesis (lit-protected) nor parallel composition. Kept in-place
+        because train.py / intervention.py / ablations.py call it (removal is invasive);
+        the 1b orchestrator is archived at _archive/2026-06-08_seq_chain_1b/.
+
         Per step ℓ (state ``z^(0)=z_q``):
             ``route_in_ℓ = z_q + Σ_{j<ℓ} mod_j``     (router + experts see progress)
             ``alpha_ℓ    = route(route_in_ℓ)``
