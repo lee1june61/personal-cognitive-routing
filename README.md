@@ -185,7 +185,7 @@ All three negatives were **independently reproduced from scratch on 2026-06-04**
 ## Tech stack
 
 - **Language / framework:** Python, PyTorch
-- **Encoder:** frozen sentence encoder (`e5-large-v2`, 1024-dim), with **no LLM in the training loop**; everything is embedding-level + multiple-choice scoring
+- **Encoder:** frozen sentence encoder (1024-dim), with **no LLM in the training loop** (everything is embedding-level + multiple-choice scoring). Phase 1 uses `BGE-large-en-v1.5`; Phase 1.5 switches to `e5-large-v2` (chosen for a higher raw operation-alignment ceiling in diagnostics), with `BGE-large-en-v1.5` retained as an encoder-swap ablation
 - **Router:** ReMoE-style gate (ReLU experts + an adaptive L1 controller targeting a small active set, `K_active ≈ 4`)
 - **Decoder:** gated low-rank hypernet modulation with a strict **no-bypass** invariant (if the operation activation is zero, the output is zero, so the passage can't leak around the bottleneck)
 - **Objective:** multiple-choice cross-entropy (contrastive over 4 candidates)
